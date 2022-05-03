@@ -6,12 +6,18 @@
 #include "shader.h"
 #include "input.h"
 #include "animation.h"
+#include "entity.h"
 
 #include <cmath>
 
 //some globals
-Mesh* mesh = NULL;
-Texture* texture = NULL;
+EntityMesh islandMesh;
+EntityMesh planeMesh;
+Matrix44 bombOffset;
+EntityMesh bombMesh;
+bool cameraLocked = true; //util para debug
+bool bombAttached = true;
+
 Shader* shader = NULL;
 Animation* anim = NULL;
 float angle = 0;
@@ -38,25 +44,58 @@ Game::Game(int window_width, int window_height, SDL_Window* window)
 	glEnable( GL_CULL_FACE ); //render both sides of every triangle
 	glEnable( GL_DEPTH_TEST ); //check the occlusions using the Z buffer
 
+	//bomb offset
+	bombOffset.setTranslation(0.0f, -2.0f, 0.0f);
 	//create our camera
 	camera = new Camera();
 	camera->lookAt(Vector3(0.f,100.f, 100.f),Vector3(0.f,0.f,0.f), Vector3(0.f,1.f,0.f)); //position the camera and point to 0,0,0
-	camera->setPerspective(70.f,window_width/(float)window_height,0.1f,10000.f); //set the projection, we want to be perspective
+	camera->setPerspective(70.f,window_width/(float)window_height,0.1f,10000.f); //set the projection, we want to be perspective //far plane is last argument to get more vision!
 
+	//load colors
+	islandMesh.color = Vector4(1, 1, 1, 1);
+	planeMesh.color = Vector4(1, 1, 1, 1);
+	bombMesh.color = Vector4(1, 1, 1, 1);
 	//load one texture without using the Texture Manager (Texture::Get would use the manager)
-	texture = new Texture();
- 	texture->load("data/texture.tga");
-
+	islandMesh.texture = Texture::Get("data/island_color.tga");
+ 	planeMesh.texture = Texture::Get("data/spitfire_color_spec.tga");
+	bombMesh.texture = Texture::Get("data/torpedo.tga");
 	// example of loading Mesh from Mesh Manager
-	mesh = Mesh::Get("data/box.ASE");
-
+	islandMesh.mesh = Mesh::Get("data/island.ASE");
+	planeMesh.mesh = Mesh::Get("data/spitfire.ASE");
+	bombMesh.mesh = Mesh::Get("data/torpedo.ASE");
 	// example of shader loading using the shaders manager
-	shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
-
+	islandMesh.shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
+	planeMesh.shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
+	bombMesh.shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
 	//hide the cursor
 	SDL_ShowCursor(!mouse_locked); //hide or show the mouse
 }
+/*test old example
+void renderIslands() {
+	if (shader)
+	{
+		Camera* camera = Camera::current;
+		float time = Game::instance->time;
+		//enable shader
+		shader->enable();
 
+		//upload uniforms
+		shader->setUniform("u_color", Vector4(1, 1, 1, 1));
+		shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
+		shader->setUniform("u_texture", texture, 0);
+		shader->setUniform("u_time", time);
+
+		//instancias de objetos
+		Matrix44 m;
+
+		
+
+
+		//disable shader
+		shader->disable();
+	}
+}
+*/
 //what to do when the image has to be draw
 void Game::render(void)
 {
@@ -66,36 +105,28 @@ void Game::render(void)
 	// Clear the window and the depth buffer
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	//set the camera as default
-	camera->enable();
 
 	//set flags
 	glDisable(GL_BLEND);
 	glEnable(GL_DEPTH_TEST);
-	glDisable(GL_CULL_FACE);
+	glDisable(GL_CULL_FACE); //culling to optimize (no carga caras que no se ven)
    
-	//create model matrix for cube
-	Matrix44 m;
-	m.rotate(angle*DEG2RAD, Vector3(0, 1, 0));
-
-	if(shader)
-	{
-		//enable shader
-		shader->enable();
-
-		//upload uniforms
-		shader->setUniform("u_color", Vector4(1,1,1,1));
-		shader->setUniform("u_viewprojection", camera->viewprojection_matrix );
-		shader->setUniform("u_texture", texture, 0);
-		shader->setUniform("u_model", m);
-		shader->setUniform("u_time", time);
-
-		//do the draw call
-		mesh->render( GL_TRIANGLES );
-
-		//disable shader
-		shader->disable();
+	if (cameraLocked) {
+		//camera following plane
+		Vector3 eye = planeMesh.model * Vector3(0.0f, 10.0f, 15.0f);
+		Vector3 center = planeMesh.model * Vector3(0.0f, 0.0f, -20.0f);
+		Vector3 up = planeMesh.model.rotateVector(Vector3(0.0f, 1.0f, 0.0f));
+		//set the camera as default
+		camera->enable();
+		camera->lookAt(eye, center, up);
 	}
+	
+	//Render
+	islandMesh.render();
+	planeMesh.render();
+	bombMesh.render();
+	//islandMesh.mesh->renderBounding(islandMesh.model); debug too see bounding
+	//renderIslands(); old function
 
 	//Draw the floor grid
 	drawGrid();
@@ -121,12 +152,43 @@ void Game::update(double seconds_elapsed)
 		camera->rotate(Input::mouse_delta.y * 0.005f, camera->getLocalVector( Vector3(-1.0f,0.0f,0.0f)));
 	}
 
-	//async input to move the camera around
-	if(Input::isKeyPressed(SDL_SCANCODE_LSHIFT) ) speed *= 10; //move faster with left shift
-	if (Input::isKeyPressed(SDL_SCANCODE_W) || Input::isKeyPressed(SDL_SCANCODE_UP)) camera->move(Vector3(0.0f, 0.0f, 1.0f) * speed);
-	if (Input::isKeyPressed(SDL_SCANCODE_S) || Input::isKeyPressed(SDL_SCANCODE_DOWN)) camera->move(Vector3(0.0f, 0.0f,-1.0f) * speed);
-	if (Input::isKeyPressed(SDL_SCANCODE_A) || Input::isKeyPressed(SDL_SCANCODE_LEFT)) camera->move(Vector3(1.0f, 0.0f, 0.0f) * speed);
-	if (Input::isKeyPressed(SDL_SCANCODE_D) || Input::isKeyPressed(SDL_SCANCODE_RIGHT)) camera->move(Vector3(-1.0f,0.0f, 0.0f) * speed);
+	if (Input::wasKeyPressed(SDL_SCANCODE_TAB)) {
+		cameraLocked = !cameraLocked;
+	}
+
+	if (cameraLocked){
+		float planeSpeed = 30.0f * elapsed_time;
+		float rotSpeed = 90.0f * DEG2RAD * elapsed_time;
+
+		if (Input::isKeyPressed(SDL_SCANCODE_W)) planeMesh.model.translate(0.0f,0.0f,-planeSpeed);
+		if (Input::isKeyPressed(SDL_SCANCODE_S)) planeMesh.model.translate(0.0f, 0.0f, planeSpeed);
+		if (Input::isKeyPressed(SDL_SCANCODE_A)) planeMesh.model.rotate(-rotSpeed, Vector3(0.0f, 1.0f, 0.0f));
+		if (Input::isKeyPressed(SDL_SCANCODE_D)) planeMesh.model.rotate(rotSpeed, Vector3(0.0f, 1.0f, 0.0f));
+		if (Input::isKeyPressed(SDL_SCANCODE_E)) planeMesh.model.rotate(-rotSpeed, Vector3(0.0f, 0.0f, 1.0f));
+		if (Input::isKeyPressed(SDL_SCANCODE_Q)) planeMesh.model.rotate(rotSpeed, Vector3(0.0f, 0.0f, 1.0f));
+
+	}
+	else {
+		//async input to move the camera around
+		if (Input::isKeyPressed(SDL_SCANCODE_LSHIFT)) speed *= 10; //move faster with left shift
+		if (Input::isKeyPressed(SDL_SCANCODE_W) || Input::isKeyPressed(SDL_SCANCODE_UP)) camera->move(Vector3(0.0f, 0.0f, 1.0f) * speed);
+		if (Input::isKeyPressed(SDL_SCANCODE_S) || Input::isKeyPressed(SDL_SCANCODE_DOWN)) camera->move(Vector3(0.0f, 0.0f, -1.0f) * speed);
+		if (Input::isKeyPressed(SDL_SCANCODE_A) || Input::isKeyPressed(SDL_SCANCODE_LEFT)) camera->move(Vector3(1.0f, 0.0f, 0.0f) * speed);
+		if (Input::isKeyPressed(SDL_SCANCODE_D) || Input::isKeyPressed(SDL_SCANCODE_RIGHT)) camera->move(Vector3(-1.0f, 0.0f, 0.0f) * speed);
+		if (Input::isKeyPressed(SDL_SCANCODE_E)) camera->move(Vector3(0.0f, -1.0f, 0.0f) * speed);
+		if (Input::isKeyPressed(SDL_SCANCODE_Q)) camera->move(Vector3(0.0f, 1.0f, 0.0f) * speed);
+	}
+	//Bomba test
+	if (Input::wasKeyPressed(SDL_SCANCODE_F)) {
+		bombAttached = false;
+	}
+	//bomba attached
+	if (bombAttached) {
+		bombMesh.model = bombOffset * planeMesh.model;
+	}
+	else {
+		bombMesh.model.translateGlobal(0.0f, -9.8f * elapsed_time * 6, 0.0f);
+	}
 
 	//to navigate with the mouse fixed in the middle
 	if (mouse_locked)

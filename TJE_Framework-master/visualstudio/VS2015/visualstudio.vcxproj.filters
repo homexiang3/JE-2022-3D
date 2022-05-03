@@ -64,6 +64,12 @@
     <ClCompile Include="..\..\src\extra\jpgd.cpp">
       <Filter>extra</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\entity.cpp">
+      <Filter>ourFiles</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\scene.cpp">
+      <Filter>ourFiles</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\camera.h" />
@@ -125,6 +131,12 @@
     <ClInclude Include="..\..\src\extra\jpgd.h">
       <Filter>extra</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\src\entity.h">
+      <Filter>ourFiles</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\scene.h">
+      <Filter>ourFiles</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="extra">
@@ -138,6 +150,9 @@
     </Filter>
     <Filter Include="utils">
       <UniqueIdentifier>{feb78646-9d96-43df-8d00-2397429ea3ef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ourFiles">
+      <UniqueIdentifier>{8b08d227-4253-4072-8cb1-cda519123c5f}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
