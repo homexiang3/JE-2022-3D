@@ -14,6 +14,9 @@ public:
 	//some attributes
 	std::string name;
 	Matrix44 model;
+	Matrix44 global_model;
+	BoundingBox aabb;
+	//bool recalculate; para recalcular el bounding box cuando se mueva el objeto
 	//bool destroyed = false if we want to ignore actions for destroyed entities on destroyed vectors
 
 	//methods overwritten

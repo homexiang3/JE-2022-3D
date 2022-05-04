@@ -46,56 +46,29 @@ Game::Game(int window_width, int window_height, SDL_Window* window)
 
 	//bomb offset
 	bombOffset.setTranslation(0.0f, -2.0f, 0.0f);
+	//create Scene
+	scene = new Scene();
 	//create our camera
 	camera = new Camera();
 	camera->lookAt(Vector3(0.f,100.f, 100.f),Vector3(0.f,0.f,0.f), Vector3(0.f,1.f,0.f)); //position the camera and point to 0,0,0
 	camera->setPerspective(70.f,window_width/(float)window_height,0.1f,10000.f); //set the projection, we want to be perspective //far plane is last argument to get more vision!
 
 	//load colors
-	islandMesh.color = Vector4(1, 1, 1, 1);
 	planeMesh.color = Vector4(1, 1, 1, 1);
 	bombMesh.color = Vector4(1, 1, 1, 1);
 	//load one texture without using the Texture Manager (Texture::Get would use the manager)
-	islandMesh.texture = Texture::Get("data/island_color.tga");
  	planeMesh.texture = Texture::Get("data/spitfire_color_spec.tga");
 	bombMesh.texture = Texture::Get("data/torpedo.tga");
 	// example of loading Mesh from Mesh Manager
-	islandMesh.mesh = Mesh::Get("data/island.ASE");
 	planeMesh.mesh = Mesh::Get("data/spitfire.ASE");
 	bombMesh.mesh = Mesh::Get("data/torpedo.ASE");
 	// example of shader loading using the shaders manager
-	islandMesh.shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
 	planeMesh.shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
 	bombMesh.shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
 	//hide the cursor
 	SDL_ShowCursor(!mouse_locked); //hide or show the mouse
 }
-/*test old example
-void renderIslands() {
-	if (shader)
-	{
-		Camera* camera = Camera::current;
-		float time = Game::instance->time;
-		//enable shader
-		shader->enable();
 
-		//upload uniforms
-		shader->setUniform("u_color", Vector4(1, 1, 1, 1));
-		shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
-		shader->setUniform("u_texture", texture, 0);
-		shader->setUniform("u_time", time);
-
-		//instancias de objetos
-		Matrix44 m;
-
-		
-
-
-		//disable shader
-		shader->disable();
-	}
-}
-*/
 //what to do when the image has to be draw
 void Game::render(void)
 {
@@ -122,8 +95,8 @@ void Game::render(void)
 	}
 	
 	//Render
-	//islandMesh.render();
-	float padding = 20.0f;
+
+	/*float padding = 20.0f;
 	float no_render_distance = 1000.0f;
 	for (size_t i = 0; i <100; i++)
 	{
@@ -145,10 +118,15 @@ void Game::render(void)
 
 			planeMesh.render();
 		}
+	}*/
+	planeMesh.render();
+	for (size_t i = 0; i < scene->entities.size(); i++)
+	{
+		EntityMesh* entity = scene->entities[i];
+		entity->render();
 	}
 	//bombMesh.render();
-	//islandMesh.mesh->renderBounding(islandMesh.model); debug too see bounding
-	//renderIslands(); old function
+	//planeMesh.mesh->renderBounding(planeMesh.model); debug too see bounding
 
 	//Draw the floor grid
 	drawGrid();
@@ -224,6 +202,7 @@ void Game::onKeyDown( SDL_KeyboardEvent event )
 	{
 		case SDLK_ESCAPE: must_exit = true; break; //ESC key, kill the app
 		case SDLK_F1: Shader::ReloadAll(); break; 
+		case SDLK_2: scene->addEntityOnFront(); break; //debug to add sphere on front
 	}
 }
 

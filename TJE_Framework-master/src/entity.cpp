@@ -56,19 +56,22 @@ void EntityMesh::render() {
 	Camera* camera = Camera::current;
 	Matrix44 model = this->model;
 
-	//enable shader and pass uniforms
-	a_shader->enable();
-	a_shader->setUniform("u_model", model);
+	//enable shader and pass uniforms optimizar todo lo que se pueda
+	a_shader->enable(); //esta parte se puede optimizar si son iguales los shaders..
 	a_shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
 	a_shader->setUniform("u_texture", tex, 0);
 
 	a_shader->setUniform("u_color", color);
 	a_shader->setUniform("u_time", Game::instance->time);
 
+	mesh->enableBuffers(a_shader);
+	//parte dinamica que se tendria q pintar diferente en cada objeto
+	a_shader->setUniform("u_model", model);
 	//render the mesh using the shader
 	a_mesh->render(GL_TRIANGLES);
 
 	//disable the shader after finishing rendering
+	mesh->disableBuffers(a_shader);
 	a_shader->disable();
 }
 
