@@ -14,6 +14,7 @@ public:
 	//some attributes
 	std::string name;
 	Matrix44 model;
+	//bool destroyed = false if we want to ignore actions for destroyed entities on destroyed vectors
 
 	//methods overwritten
 	virtual void render();
@@ -21,6 +22,8 @@ public:
 
 	//useful methods
 	Vector3 getPosition();
+	void destroy(std::vector<Entity*> s_to_destroy);
+	
 
 	//arbol de escena
 	Entity* parent;
@@ -50,4 +53,41 @@ class EntityLight : public Entity {};
 class EntitySound : public Entity {};
 class EntityTrigger : public Entity {};
 
+class Airplane : public Entity
+{
+	 public:
+	static std::vector<Airplane*> planes;
+
+	char type;
+
+	Airplane() {
+planes.push_back(this);
+}
+
+
+~Airplane() {
+auto it = planes.find(this);
+planes.remove(it);
+}
+
+static void renderAll();
+static void updateAll( float dt );
+};
+
+//guardar informacion de cada "material" dentro de un vector
+
+class PropType {
+	int index;
+	Mesh* mesh;
+	Texture* texture;
+	//...
+};
+
+//array of types (max 32 types)
+PropType proptypes[32];
+class Prop {
+	public:
+		int type;	//index to the array
+		Matrix44 model;
+};
 */

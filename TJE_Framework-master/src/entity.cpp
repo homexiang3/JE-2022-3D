@@ -28,6 +28,11 @@ Vector3 Entity::getPosition() {
 	return Vector3(0, 0, 0); //only test
 }
 
+void Entity::destroy(std::vector<Entity*> s_to_destroy) {
+	s_to_destroy.push_back(this);
+	//for every children call destroy
+}
+
 Matrix44 Entity::getGlobalMatrix() { //recursive get matrix of parents
 	if (parent)
 		return model * parent->getGlobalMatrix();

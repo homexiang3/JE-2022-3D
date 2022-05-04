@@ -122,9 +122,31 @@ void Game::render(void)
 	}
 	
 	//Render
-	islandMesh.render();
-	planeMesh.render();
-	bombMesh.render();
+	//islandMesh.render();
+	float padding = 20.0f;
+	float no_render_distance = 1000.0f;
+	for (size_t i = 0; i <100; i++)
+	{
+		for (size_t j = 0; j < 100; j++)
+		{
+			Vector3 planePos = planeMesh.model.getTranslation();
+			Vector3 camPos = camera->eye;
+			float dist = planePos.distance(camPos);
+
+			planeMesh.model.setTranslation(i*padding, 0.0f, j*padding);
+			if (dist > no_render_distance) { //don't render if is out of distance
+				continue;
+			}
+
+			BoundingBox worldAABB = transformBoundingBox(planeMesh.model, planeMesh.mesh->box);//don't render if bounding box is out of camera add to render..
+			if (!camera->testBoxInFrustum(worldAABB.center, worldAABB.halfsize)) {
+				continue;
+			}
+
+			planeMesh.render();
+		}
+	}
+	//bombMesh.render();
 	//islandMesh.mesh->renderBounding(islandMesh.model); debug too see bounding
 	//renderIslands(); old function
 

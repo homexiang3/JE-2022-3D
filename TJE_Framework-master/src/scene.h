@@ -9,6 +9,7 @@ public:
 	~Scene();
 
 	Entity* root;
+	std::vector<Entity*> s_to_destroy;//destroy vector
 	//poner todas las entities
 	//metodos como entidades dentro de area..
 
