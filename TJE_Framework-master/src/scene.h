@@ -2,6 +2,7 @@
 
 #include "entity.h"
 
+//Clase para guardar diferentes tipos de texturas y meshes utiles para reutilizar dentro de nuestro juego por ejemplo cosas del entorno que se repiten
 class Prop
 {
 public:
@@ -13,7 +14,7 @@ public:
 
 };
 
-
+//Clase similar a "world" que se encarga de guardar todos los elementos del mundo (ej. variables globales ) para despues pintarlos en pantalla 
 class Scene
 {
 public:

@@ -5,6 +5,8 @@
 #include "texture.h"
 #include "shader.h"
 
+//clase base de la entidad
+
 class Entity
 {
 public:
@@ -36,12 +38,15 @@ public:
 	Matrix44 getGlobalMatrix();
 };
 
+//clase para de momento guardar los meshes que vayamos cargando
+
 class EntityMesh : public Entity {
 public:
+	EntityMesh(char* meshPath, char* texturePath, char* shaderPath, char* shaderPath2, Vector4 color);
 	//Attributes of this class 
 	Mesh* mesh;
 	Texture* texture;
-	Shader* shader;
+	Shader* shader; //si acabamos utilizando uno se podria opitimizar mucho quitandolo de aqui y llamarlo solo en el render de game
 	Vector4 color;
 
 	//methods overwritten 

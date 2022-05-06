@@ -11,10 +11,9 @@
 #include <cmath>
 
 //some globals
-EntityMesh islandMesh;
-EntityMesh planeMesh;
+EntityMesh* planeMesh = NULL;
 Matrix44 bombOffset;
-EntityMesh bombMesh;
+EntityMesh* bombMesh = NULL;
 bool cameraLocked = true; //util para debug
 bool bombAttached = true;
 
@@ -53,18 +52,10 @@ Game::Game(int window_width, int window_height, SDL_Window* window)
 	camera->lookAt(Vector3(0.f,100.f, 100.f),Vector3(0.f,0.f,0.f), Vector3(0.f,1.f,0.f)); //position the camera and point to 0,0,0
 	camera->setPerspective(70.f,window_width/(float)window_height,0.1f,10000.f); //set the projection, we want to be perspective //far plane is last argument to get more vision!
 
-	//load colors
-	planeMesh.color = Vector4(1, 1, 1, 1);
-	bombMesh.color = Vector4(1, 1, 1, 1);
-	//load one texture without using the Texture Manager (Texture::Get would use the manager)
- 	planeMesh.texture = Texture::Get("data/spitfire_color_spec.tga");
-	bombMesh.texture = Texture::Get("data/torpedo.tga");
-	// example of loading Mesh from Mesh Manager
-	planeMesh.mesh = Mesh::Get("data/spitfire.ASE");
-	bombMesh.mesh = Mesh::Get("data/torpedo.ASE");
-	// example of shader loading using the shaders manager
-	planeMesh.shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
-	bombMesh.shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
+	//load entities
+	planeMesh = new EntityMesh("data/spitfire.ASE", "data/spitfire_color_spec.tga", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
+	bombMesh = new EntityMesh("data/torpedo.ASE", "data/torpedo.tga", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
+	
 	//hide the cursor
 	SDL_ShowCursor(!mouse_locked); //hide or show the mouse
 }
@@ -86,40 +77,16 @@ void Game::render(void)
    
 	if (cameraLocked) {
 		//camera following plane
-		Vector3 eye = planeMesh.model * Vector3(0.0f, 10.0f, 15.0f);
-		Vector3 center = planeMesh.model * Vector3(0.0f, 0.0f, -20.0f);
-		Vector3 up = planeMesh.model.rotateVector(Vector3(0.0f, 1.0f, 0.0f));
+		Vector3 eye = planeMesh->model * Vector3(0.0f, 10.0f, 15.0f);
+		Vector3 center = planeMesh->model * Vector3(0.0f, 0.0f, -20.0f);
+		Vector3 up = planeMesh->model.rotateVector(Vector3(0.0f, 1.0f, 0.0f));
 		//set the camera as default
 		camera->enable();
 		camera->lookAt(eye, center, up);
 	}
 	
 	//Render
-
-	/*float padding = 20.0f;
-	float no_render_distance = 1000.0f;
-	for (size_t i = 0; i <100; i++)
-	{
-		for (size_t j = 0; j < 100; j++)
-		{
-			Vector3 planePos = planeMesh.model.getTranslation();
-			Vector3 camPos = camera->eye;
-			float dist = planePos.distance(camPos);
-
-			planeMesh.model.setTranslation(i*padding, 0.0f, j*padding);
-			if (dist > no_render_distance) { //don't render if is out of distance
-				continue;
-			}
-
-			BoundingBox worldAABB = transformBoundingBox(planeMesh.model, planeMesh.mesh->box);//don't render if bounding box is out of camera add to render..
-			if (!camera->testBoxInFrustum(worldAABB.center, worldAABB.halfsize)) {
-				continue;
-			}
-
-			planeMesh.render();
-		}
-	}*/
-	planeMesh.render();
+	planeMesh->render();
 	for (size_t i = 0; i < scene->entities.size(); i++)
 	{
 		EntityMesh* entity = scene->entities[i];
@@ -160,13 +127,13 @@ void Game::update(double seconds_elapsed)
 		float planeSpeed = 30.0f * elapsed_time;
 		float rotSpeed = 90.0f * DEG2RAD * elapsed_time;
 
-		if (Input::isKeyPressed(SDL_SCANCODE_W)) planeMesh.model.translate(0.0f,0.0f,-planeSpeed);
-		if (Input::isKeyPressed(SDL_SCANCODE_S)) planeMesh.model.translate(0.0f, 0.0f, planeSpeed);
-		if (Input::isKeyPressed(SDL_SCANCODE_A)) planeMesh.model.rotate(-rotSpeed, Vector3(0.0f, 1.0f, 0.0f));
-		if (Input::isKeyPressed(SDL_SCANCODE_D)) planeMesh.model.rotate(rotSpeed, Vector3(0.0f, 1.0f, 0.0f));
-		if (Input::isKeyPressed(SDL_SCANCODE_E)) planeMesh.model.rotate(-rotSpeed, Vector3(0.0f, 0.0f, 1.0f));
-		if (Input::isKeyPressed(SDL_SCANCODE_Q)) planeMesh.model.rotate(rotSpeed, Vector3(0.0f, 0.0f, 1.0f));
-
+		if (Input::isKeyPressed(SDL_SCANCODE_W)) planeMesh->model.translate(0.0f,0.0f,-planeSpeed);
+		if (Input::isKeyPressed(SDL_SCANCODE_S)) planeMesh->model.translate(0.0f, 0.0f, planeSpeed);
+		if (Input::isKeyPressed(SDL_SCANCODE_A)) planeMesh->model.rotate(-rotSpeed, Vector3(0.0f, 1.0f, 0.0f));
+		if (Input::isKeyPressed(SDL_SCANCODE_D)) planeMesh->model.rotate(rotSpeed, Vector3(0.0f, 1.0f, 0.0f));
+		if (Input::isKeyPressed(SDL_SCANCODE_E)) planeMesh->model.rotate(-rotSpeed, Vector3(0.0f, 0.0f, 1.0f));
+		if (Input::isKeyPressed(SDL_SCANCODE_Q)) planeMesh->model.rotate(rotSpeed, Vector3(0.0f, 0.0f, 1.0f));
+														  
 	}
 	else {
 		//async input to move the camera around
@@ -184,10 +151,10 @@ void Game::update(double seconds_elapsed)
 	}
 	//bomba attached
 	if (bombAttached) {
-		bombMesh.model = bombOffset * planeMesh.model;
+		bombMesh->model = bombOffset * planeMesh->model;
 	}
 	else {
-		bombMesh.model.translateGlobal(0.0f, -9.8f * elapsed_time * 6, 0.0f);
+		bombMesh->model.translateGlobal(0.0f, -9.8f * elapsed_time * 6, 0.0f);
 	}
 
 	//to navigate with the mouse fixed in the middle
