@@ -10,18 +10,13 @@
 
 #include <cmath>
 
-//some globals
-EntityMesh* planeMesh = NULL;
-Matrix44 bombOffset;
-EntityMesh* bombMesh = NULL;
-bool cameraLocked = true; //util para debug
-bool bombAttached = true;
 
 Shader* shader = NULL;
 Animation* anim = NULL;
 float angle = 0;
 float mouse_speed = 100.0f;
 FBO* fbo = NULL;
+float gravityConstant = 9.8f;
 
 Game* Game::instance = NULL;
 
@@ -43,19 +38,15 @@ Game::Game(int window_width, int window_height, SDL_Window* window)
 	glEnable( GL_CULL_FACE ); //render both sides of every triangle
 	glEnable( GL_DEPTH_TEST ); //check the occlusions using the Z buffer
 
-	//bomb offset
-	bombOffset.setTranslation(0.0f, -2.0f, 0.0f);
+
 	//create Scene
 	scene = new Scene();
+
 	//create our camera
 	camera = new Camera();
 	camera->lookAt(Vector3(0.f,100.f, 100.f),Vector3(0.f,0.f,0.f), Vector3(0.f,1.f,0.f)); //position the camera and point to 0,0,0
 	camera->setPerspective(70.f,window_width/(float)window_height,0.1f,10000.f); //set the projection, we want to be perspective //far plane is last argument to get more vision!
 
-	//load entities
-	planeMesh = new EntityMesh("data/spitfire.ASE", "data/spitfire_color_spec.tga", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
-	bombMesh = new EntityMesh("data/torpedo.ASE", "data/torpedo.tga", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
-	
 	//hide the cursor
 	SDL_ShowCursor(!mouse_locked); //hide or show the mouse
 }
@@ -75,25 +66,60 @@ void Game::render(void)
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE); //culling to optimize (no carga caras que no se ven)
    
-	if (cameraLocked) {
+	camera->enable();
+
+	Matrix44 playerModel;
+	playerModel.translate(scene->player.pos.x, scene->player.pos.y, scene->player.pos.z);
+	playerModel.rotate(scene->player.yaw * DEG2RAD, Vector3(0, 1, 0));
+	scene->playerEntity->model = playerModel;
+
+	if (scene->cameraLocked) {
 		//camera following plane
-		Vector3 eye = planeMesh->model * Vector3(0.0f, 10.0f, 15.0f);
-		Vector3 center = planeMesh->model * Vector3(0.0f, 0.0f, -20.0f);
-		Vector3 up = planeMesh->model.rotateVector(Vector3(0.0f, 1.0f, 0.0f));
-		//set the camera as default
-		camera->enable();
+		Vector3 eye = playerModel * Vector3(0.0f, 3.0f, 3.0f);
+		Vector3 center = playerModel * Vector3(0.0f, 0.0f, -5.0f);
+		Vector3 up = Vector3(0.0f, 1.0f, 0.0f);
+		if (scene->firstPerson) {
+			//si es first person no renderizar el personaje o solo manos/piernas
+			Matrix44 firstPersonModel = playerModel;
+			firstPersonModel.rotate(scene->player.pitch * DEG2RAD, Vector3(1, 0, 0));
+
+			eye = playerModel * Vector3(0.0f, 1.0f, -0.5f);
+			center = eye + firstPersonModel.rotateVector(Vector3(0.0f, 0.0f, -1.0f));
+			up = firstPersonModel.rotateVector(Vector3(0.0f, 1.0f, 0.0f));
+		}
+		//set the camera 
 		camera->lookAt(eye, center, up);
 	}
 	
 	//Render
-	planeMesh->render();
-	for (size_t i = 0; i < scene->entities.size(); i++)
+	//scene->skyMesh->model.setTranslation(camera->eye.x, camera->eye.y - 20.0f, camera->eye.z); solo usarlo si el mapa fuera muy grande
+	glDisable(GL_DEPTH_TEST);
+	scene->skyMesh->render();//cielo
+	glEnable(GL_DEPTH_TEST);
+
+	scene->groundMesh->render(); //suelo
+
+	scene->playerEntity->render();//player
+
+	for (size_t i = 0; i < scene->entities.size(); i++)//entities added
 	{
 		EntityMesh* entity = scene->entities[i];
 		entity->render();
 	}
+
+	for (size_t i = 0; i < scene->numParticles; i++)//particles
+	{	
+		//actualizarlas por si se mueven
+		sParticle* particle = scene->particles[i];
+		Matrix44 model;
+		model.translate(particle->pos.x, particle->pos.y, particle->pos.z);
+
+		EntityMesh* entity = scene->particlesMesh[i];
+		entity->model = model;
+		entity->render();
+	}
 	//bombMesh.render();
-	//planeMesh.mesh->renderBounding(planeMesh.model); debug too see bounding
+	//playerEntity.mesh->renderBounding(playerEntity.model); debug too see bounding
 
 	//Draw the floor grid
 	drawGrid();
@@ -112,6 +138,32 @@ void Game::update(double seconds_elapsed)
 	//example
 	angle += (float)seconds_elapsed * 10.0f;
 
+	//escalar tiempo para que vayan mas lentas las particulas
+	if (Input::isKeyPressed(SDL_SCANCODE_SPACE)) {
+		seconds_elapsed *= 0.2f;
+	}
+	//ejemplo particulas
+	for (size_t i = 0; i < scene->numParticles; i++)//particles
+	{
+		sParticle* particle = scene->particles[i];
+		//mover a su velocidad
+		particle->pos = particle->pos + (particle->vel * seconds_elapsed);
+
+		//para que caigan con gravedad
+		float gravity = gravityConstant * seconds_elapsed;
+		particle->vel = particle->vel - Vector3(0.0f, gravity, 0.0f);
+
+		//friccion
+		particle->vel = particle->vel - (particle->vel * 0.01f * seconds_elapsed);
+
+		//para que reboten en el suelo
+		if (particle->pos.y < particle->radius) {
+			particle->pos.y = particle->radius;
+			particle->vel.y = -particle->vel.y;
+			particle->vel = particle->vel * 0.8f;
+		}
+	}
+
 	//mouse input to rotate the cam
 	if ((Input::mouse_state & SDL_BUTTON_LEFT) || mouse_locked ) //is left button pressed?
 	{
@@ -120,19 +172,65 @@ void Game::update(double seconds_elapsed)
 	}
 
 	if (Input::wasKeyPressed(SDL_SCANCODE_TAB)) {
-		cameraLocked = !cameraLocked;
+		scene->cameraLocked = !scene->cameraLocked;
 	}
 
-	if (cameraLocked){
-		float planeSpeed = 30.0f * elapsed_time;
-		float rotSpeed = 90.0f * DEG2RAD * elapsed_time;
+	if (scene->cameraLocked){
+		float playerSpeed = 20.0f * elapsed_time;
+		float rotSpeed = 120.0f  * elapsed_time;
 
-		if (Input::isKeyPressed(SDL_SCANCODE_W)) planeMesh->model.translate(0.0f,0.0f,-planeSpeed);
-		if (Input::isKeyPressed(SDL_SCANCODE_S)) planeMesh->model.translate(0.0f, 0.0f, planeSpeed);
-		if (Input::isKeyPressed(SDL_SCANCODE_A)) planeMesh->model.rotate(-rotSpeed, Vector3(0.0f, 1.0f, 0.0f));
-		if (Input::isKeyPressed(SDL_SCANCODE_D)) planeMesh->model.rotate(rotSpeed, Vector3(0.0f, 1.0f, 0.0f));
-		if (Input::isKeyPressed(SDL_SCANCODE_E)) planeMesh->model.rotate(-rotSpeed, Vector3(0.0f, 0.0f, 1.0f));
-		if (Input::isKeyPressed(SDL_SCANCODE_Q)) planeMesh->model.rotate(rotSpeed, Vector3(0.0f, 0.0f, 1.0f));
+		if (scene->firstPerson) {
+			scene->player.pitch += -Input::mouse_delta.y * 10.0f * elapsed_time;
+			scene->player.yaw += -Input::mouse_delta.x * 10.0f * elapsed_time;
+			Input::centerMouse();
+			SDL_ShowCursor(false);
+		}
+		else {
+			if (Input::isKeyPressed(SDL_SCANCODE_E)) scene->player.yaw += rotSpeed;
+			if (Input::isKeyPressed(SDL_SCANCODE_Q)) scene->player.yaw -= rotSpeed;
+		}
+
+		Matrix44 playerRotation;
+		playerRotation.rotate(scene->player.yaw * DEG2RAD, Vector3(0, 1, 0));
+
+		Vector3 forward = playerRotation.rotateVector(Vector3(0, 0, -1));
+		Vector3 right = playerRotation.rotateVector(Vector3(1, 0, 0));
+
+		Vector3 playerVel;
+
+		if (Input::isKeyPressed(SDL_SCANCODE_W)) playerVel = playerVel + (forward * playerSpeed);
+		if (Input::isKeyPressed(SDL_SCANCODE_S)) playerVel = playerVel - (forward * playerSpeed);
+		if (Input::isKeyPressed(SDL_SCANCODE_D)) playerVel = playerVel + (right * playerSpeed);
+		if (Input::isKeyPressed(SDL_SCANCODE_A)) playerVel = playerVel - (right * playerSpeed);
+
+		Vector3 nextPos = scene->player.pos + playerVel;
+		//TEST COLLISIONS, HABRIA QUE TENER DINAMICAS-ESTATICAS, DINAMICAS-DINAMICAS, PLAYER-COSAS ETC...
+		//calculamos el centro de la esfera de colisión del player elevandola hasta la cintura
+		Vector3 character_center = nextPos + Vector3(0, 1, 0);
+
+		//para cada objecto de la escena...
+		for (size_t i = 0; i < scene->entities.size(); i++)
+		{
+			EntityMesh* currentEntity = scene->entities[i];
+			//comprobamos si colisiona el objeto con la esfera (radio 3)
+			Vector3 coll;
+			Vector3 collnorm;
+			if (!currentEntity->mesh->testSphereCollision(currentEntity->model, character_center, 0.5f, coll, collnorm))
+				continue; //si no colisiona, pasamos al siguiente objeto
+
+			//si la esfera está colisionando muevela a su posicion anterior alejandola del objeto
+			Vector3 push_away = normalize(coll - character_center) * elapsed_time;
+			nextPos = scene->player.pos - push_away; //move to previous pos but a little bit further
+
+			//cuidado con la Y, si nuestro juego es 2D la ponemos a 0
+			nextPos.y = 0;
+
+			//reflejamos el vector velocidad para que de la sensacion de que rebota en la pared
+			//velocity = reflect(velocity, collnorm) * 0.95;
+		}
+
+		
+		scene->player.pos = nextPos;
 														  
 	}
 	else {
@@ -147,14 +245,14 @@ void Game::update(double seconds_elapsed)
 	}
 	//Bomba test
 	if (Input::wasKeyPressed(SDL_SCANCODE_F)) {
-		bombAttached = false;
+		scene->bombAttached = false;
 	}
 	//bomba attached
-	if (bombAttached) {
-		bombMesh->model = bombOffset * planeMesh->model;
+	if (scene->bombAttached) {
+		scene->bombMesh->model = scene->bombOffset * scene->playerEntity->model;
 	}
 	else {
-		bombMesh->model.translateGlobal(0.0f, -9.8f * elapsed_time * 6, 0.0f);
+		scene->bombMesh->model.translateGlobal(0.0f, -9.8f * elapsed_time * 6, 0.0f);
 	}
 
 	//to navigate with the mouse fixed in the middle
@@ -170,6 +268,9 @@ void Game::onKeyDown( SDL_KeyboardEvent event )
 		case SDLK_ESCAPE: must_exit = true; break; //ESC key, kill the app
 		case SDLK_F1: Shader::ReloadAll(); break; 
 		case SDLK_2: scene->addEntityOnFront(); break; //debug to add sphere on front
+		case SDLK_3: scene->testCollisionOnFront(); break; //debug to see collision point on front (col in console)
+		case SDLK_4: scene->rotateSelected(10.0f); break; //rotate selected item with 3
+		case SDLK_5: scene->rotateSelected(-10.0f); break;
 	}
 }
 

@@ -42,12 +42,14 @@ public:
 
 class EntityMesh : public Entity {
 public:
-	EntityMesh(char* meshPath, char* texturePath, char* shaderPath, char* shaderPath2, Vector4 color);
+	EntityMesh(int primitive, char* meshPath, char* texturePath, char* shaderPath, char* shaderPath2, Vector4 color);
 	//Attributes of this class 
+	int primitive;
 	Mesh* mesh;
 	Texture* texture;
 	Shader* shader; //si acabamos utilizando uno se podria opitimizar mucho quitandolo de aqui y llamarlo solo en el render de game
 	Vector4 color;
+	float tiling;
 
 	//methods overwritten 
 	void render();
