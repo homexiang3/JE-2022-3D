@@ -2,8 +2,9 @@
   "ExpandedNodes": [
     "",
     "\\TJE_Framework-master",
-    "\\TJE_Framework-master\\src"
+    "\\TJE_Framework-master\\src",
+    "\\TJE_Framework-master\\visualstudio"
   ],
-  "SelectedNode": "\\TJE_Framework-master\\src\\scene.cpp",
+  "SelectedNode": "\\TJE_Framework-master\\visualstudio\\visualstudio.sln",
   "PreviewInSolutionExplorer": false
 }

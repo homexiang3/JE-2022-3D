@@ -133,6 +133,24 @@ void Game::render(void)
 
 void Game::update(double seconds_elapsed)
 {
+
+	//movement code
+	
+	float playerY = scene->playerEntity->model.getTranslation()[1];
+	float playerX = scene->playerEntity->model.getTranslation()[0];
+	float playerZ = scene->playerEntity->model.getTranslation()[2];
+
+	bool isRunning = false;
+	float walk_speed = 10.0f * elapsed_time;
+	float run_speed = 30.0f * elapsed_time;
+
+
+	scene->jumpLock = max(0.0f, scene->jumpLock - seconds_elapsed);
+
+	//sprint
+	if (Input::isKeyPressed(SDL_SCANCODE_LSHIFT)) isRunning = true;
+	float playerSpeed = (isRunning == true) ? run_speed : walk_speed;
+
 	float speed = seconds_elapsed * mouse_speed; //the speed is defined by the seconds_elapsed so it goes constant
 
 	//example
@@ -176,7 +194,7 @@ void Game::update(double seconds_elapsed)
 	}
 
 	if (scene->cameraLocked){
-		float playerSpeed = 20.0f * elapsed_time;
+		//float playerSpeed = 20.0f * elapsed_time;
 		float rotSpeed = 120.0f  * elapsed_time;
 
 		if (scene->firstPerson) {
@@ -195,6 +213,7 @@ void Game::update(double seconds_elapsed)
 
 		Vector3 forward = playerRotation.rotateVector(Vector3(0, 0, -1));
 		Vector3 right = playerRotation.rotateVector(Vector3(1, 0, 0));
+		Vector3 up = playerRotation.rotateVector(Vector3(0, 1, 0));
 
 		Vector3 playerVel;
 
@@ -203,6 +222,31 @@ void Game::update(double seconds_elapsed)
 		if (Input::isKeyPressed(SDL_SCANCODE_D)) playerVel = playerVel + (right * playerSpeed);
 		if (Input::isKeyPressed(SDL_SCANCODE_A)) playerVel = playerVel - (right * playerSpeed);
 
+		//player movement code
+		//jump
+		std::cout << playerY << std::endl;
+		if (Input::wasKeyPressed(SDL_SCANCODE_C)&& playerY <= 0.0f) {
+
+			scene->jumpLock = 0.3f;
+		}
+
+		if (scene->jumpLock != 0.0f) {
+			playerVel[1] += 0.15f;
+		}
+
+		if (playerY > 0.0f) {
+			playerVel[1] -= seconds_elapsed * 3;
+		}
+
+		//dash
+		Vector3 playerVec = scene->playerEntity->model.frontVector().normalize();
+		float sumX = 20.0*playerVec[0];
+		float sumZ = 20.0*playerVec[2];
+		if (Input::wasKeyPressed(SDL_SCANCODE_X)) {
+			playerVel[0] += sumX;
+			playerVel[2] += sumZ;
+		}
+		
 		Vector3 nextPos = scene->player.pos + playerVel;
 		//TEST COLLISIONS, HABRIA QUE TENER DINAMICAS-ESTATICAS, DINAMICAS-DINAMICAS, PLAYER-COSAS ETC...
 		//calculamos el centro de la esfera de colisión del player elevandola hasta la cintura

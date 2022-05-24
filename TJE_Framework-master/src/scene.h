@@ -57,6 +57,9 @@ public:
 	void rotateSelected(float angleDegree);
 	Vector3 getRayDir();
 	Vector3 getRayOrigin();
+
+	//jump lock
+	float jumpLock;
 };
 
 
