@@ -1,0 +1,21 @@
+mtllib ./SM_Env_Tile_Dirt_01_28.mtl
+g SM_Env_Tile_Dirt_01
+v 0 -7.450581E-09 2.5
+v 0 -7.450581E-09 0
+v 2.500002 -7.450581E-09 0
+v 2.500002 -7.450581E-09 2.5
+
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+vn 0 1 0
+
+vt 0.1494077 0.4316017
+vt 0.1494077 0.4316017
+vt 0.1494077 0.4316017
+vt 0.1494077 0.4316017
+
+usemtl PolygonSamurai_Mat_01
+usemap PolygonSamurai_Mat_01
+f 2/2/2 1/1/1 3/3/3
+f 3/3/3 1/1/1 4/4/4

@@ -6,7 +6,7 @@
 #include "shader.h"
 #include "input.h"
 #include "animation.h"
-
+#include "pathfinders.h"
 #include <cmath>
 
 //some globals
@@ -48,6 +48,18 @@ sParticle car;
 std::vector<Entity*> entities;
 Entity* selectedEntity;
 
+//AI
+float startx;
+float starty;
+float targetx;
+float targety;
+uint8* grid;
+int output[100];
+int W = 100;
+int H = 100;
+float tileSizeX = 10.0f;
+float tileSizeY = 10.0f;
+
 Vector3 Lerp(Vector3 a, Vector3 b, float t){
 	
 	Vector3 ab = b - a;
@@ -74,6 +86,14 @@ Game::Game(int window_width, int window_height, SDL_Window* window)
 	elapsed_time = 0.0f;
 	mouse_locked = false;
 
+	//AI PATHFINDING
+	//the map info should be an array W*H of bytes where 0 means block, 1 means walkable
+	grid = new uint8[W * H];
+	for (size_t i = 0; i < W * H; i++)
+	{
+		grid[i] = 1; //1 navegable 0 no
+	}
+
 	//OpenGL flags
 	glEnable( GL_CULL_FACE ); //render both sides of every triangle
 	glEnable( GL_DEPTH_TEST ); //check the occlusions using the Z buffer
@@ -85,7 +105,7 @@ Game::Game(int window_width, int window_height, SDL_Window* window)
 
 	// example of shader loading using the shaders manager
 	shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
-
+	
 	//fbo test
 	fbo = new FBO();
 	fbo->create(window_width, window_height);  //si modificas los valores sale pixelado
@@ -322,10 +342,55 @@ void Game::onKeyDown( SDL_KeyboardEvent event )
 	{
 		case SDLK_ESCAPE: must_exit = true; break; //ESC key, kill the app
 		case SDLK_F1: Shader::ReloadAll(); break; 
+		//EDITOR
 		case SDLK_1: AddEntityInFront(camera, "data/sphere.obj", "data/texture.tga"); break;
 		case SDLK_2: RayPick(camera); break;
 		case SDLK_3: RotateSelected(10.0f); break;
 		case SDLK_4: RotateSelected(-10.0f); break;
+		//PATHFINDING
+		case SDLK_5: {
+			Vector2 mouse = Input::mouse_position;
+			Game* g = Game::instance;
+			Vector3 dir = camera->getRayDirection(mouse.x, mouse.y, g->window_width, g->window_height);
+			Vector3 rayOrigin = camera->eye;
+
+			Vector3 spawnPos = RayPlaneCollision(Vector3(), Vector3(0, 1, 0), rayOrigin, dir);
+			startx = clamp(spawnPos.x / tileSizeX, 0, W);
+			starty = clamp(spawnPos.z / tileSizeY, 0, H);
+			break;
+		}
+		case SDLK_6: {
+			Vector2 mouse = Input::mouse_position;
+			Game* g = Game::instance;
+			Vector3 dir = camera->getRayDirection(mouse.x, mouse.y, g->window_width, g->window_height);
+			Vector3 rayOrigin = camera->eye;
+
+			Vector3 spawnPos = RayPlaneCollision(Vector3(), Vector3(0, 1, 0), rayOrigin, dir);
+
+			targetx = clamp(spawnPos.x / tileSizeX, 0, W);
+			targety = clamp(spawnPos.z / tileSizeY, 0, H);
+
+			//when we want to find the shortest path, this array contains the shortest path, every value is the Nth position in the map, 100 steps max
+			int output[100];
+
+			//we call the path function, it returns the number of steps to reach target, otherwise 0
+			int path_steps = AStarFindPathNoTieDiag(
+				startx, starty, //origin (tienen que ser enteros)
+				targetx, targety, //target (tienen que ser enteros)
+				grid, //pointer to map data
+				W, H, //map width and height
+				output, //pointer where the final path will be stored
+				100); //max supported steps of the final path
+			//check if there was a path
+			if (path_steps != -1)
+			{
+				for (int i = 0; i < path_steps; ++i)
+					std::cout << "X: " << (output[i] % W) << ", Y: " << floor(output[i] / W) << std::endl;
+			}
+
+			break;
+		}
+
 	}
 }
 
