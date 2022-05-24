@@ -1,0 +1,13 @@
+ENTITYCOUNT 2
+
+ENTITY#0
+POS 0 0 100
+ROT 0 0 0
+MESH data/car.obj
+TEXTURE data/color-atlas-new.png
+
+ENTITY#1
+POS 19.127 0 -145.162
+ROT 0 90 0
+MESH data/sphere.obj
+TEXTURE data/texture.tga
