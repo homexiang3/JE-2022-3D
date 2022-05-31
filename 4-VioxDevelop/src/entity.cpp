@@ -10,17 +10,19 @@ Entity::~Entity() {
 }
 
 //constructor de entity mesh para guardarlo de manera mas comoda (crear EntityMesh* y luego hacerle un new EntityMesh(valores), para simplificar solo necesita los paths)
-EntityMesh::EntityMesh(int primitive, char* meshPath, char* texturePath, char* shaderPath1, char* shaderPath2, Vector4 color) { 
+EntityMesh::EntityMesh(int primitive, std::string meshPath, std::string texturePath, char* shaderPath1, char* shaderPath2, Vector4 color) {
 	
 	this->primitive = primitive;
 
-	if (meshPath != NULL) {
-		this->mesh = Mesh::Get(meshPath);
+	if (!meshPath.empty()) {
+		this->mesh = Mesh::Get(meshPath.c_str());
 	}
-	this->texture = Texture::Get(texturePath);
+	this->texture = Texture::Get(texturePath.c_str());
 	this->shader = Shader::Get(shaderPath1, shaderPath2);
 	this->color = color;
 	this->tiling = 1.0f;
+	this->meshPath = meshPath;
+	this->texturePath = texturePath;
 }
 
 void Entity::render() {

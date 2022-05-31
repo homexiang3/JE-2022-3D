@@ -6,6 +6,7 @@
 #include "shader.h"
 #include "input.h"
 #include "animation.h"
+#include "audio.h"
 
 #include <cmath>
 
@@ -50,6 +51,13 @@ Game::Game(int window_width, int window_height, SDL_Window* window)
 
 	//hide the cursor
 	SDL_ShowCursor(!mouse_locked); //hide or show the mouse
+
+	if (BASS_Init(-1, 44100, 0, 0, NULL) == false) //-1 significa usar el por defecto del sistema operativo
+	{
+		std::cout << "ERROR initializing audio" << std::endl;
+	}
+
+	//scene->audio->playGameSound("data/sounds/test.mp3"); 
 }
 
 //what to do when the image has to be draw
@@ -101,6 +109,9 @@ void Game::update(double seconds_elapsed)
 		camera->rotate(Input::mouse_delta.x * 0.005f, Vector3(0.0f, -1.0f, 0.0f));
 		camera->rotate(Input::mouse_delta.y * 0.005f, camera->getLocalVector(Vector3(-1.0f, 0.0f, 0.0f)));
 	}
+
+	if (mouse_locked) Input::centerMouse();
+	
 }
 
 //Keyboard event handler (sync input)

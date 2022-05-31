@@ -42,13 +42,15 @@ public:
 
 class EntityMesh : public Entity {
 public:
-	EntityMesh(int primitive, char* meshPath, char* texturePath, char* shaderPath, char* shaderPath2, Vector4 color);
+	EntityMesh(int primitive, std::string meshPath, std::string texturePath, char* shaderPath, char* shaderPath2, Vector4 color);
 	//Attributes of this class 
 	int primitive;
 	Mesh* mesh;
 	Texture* texture;
 	Shader* shader; //si acabamos utilizando uno se podria opitimizar mucho quitandolo de aqui y llamarlo solo en el render de game
 	Vector4 color;
+	std::string meshPath;
+	std::string texturePath;
 	float tiling;
 
 	//methods overwritten 
@@ -63,13 +65,16 @@ struct sPlayer {
 	float yaw = 0.0f;
 	float pitch = 0.0f; //para el first person
 	float radius = 10.0f; //por si queremos hacer bounding con colisions
-	EntityMesh* entity;
+	int health;
+	EntityMesh* character_mesh;
+	Vector2 dash_direction;
+	float jumpLock;
 
 	Matrix44 getModel() {
 		Matrix44 model;
 		model.translate(pos.x, pos.y, pos.z);
 		model.rotate(yaw * DEG2RAD, Vector3(0, 1, 0));
-		entity->model = model;
+		this->character_mesh->model = model;
 		return  model;
 	}
 	

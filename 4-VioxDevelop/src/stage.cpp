@@ -24,24 +24,24 @@ void InitStages(std::vector<Stage*>& stages) {
 
 void IntroStage::Render() {
 	
-	
+	//TO DO
 }
 
 
 void IntroStage::Update(float seconds_elapsed) {
-	
+	//TO DO
 }
 
 //TUTORIAL STAGE
 
 void TutorialStage::Render() {
 
-	
+	//TO DO
 
 }
 
 void TutorialStage::Update(float seconds_elapsed) {
-	
+	//TO DO
 }
 
 //PLAY STAGE
@@ -51,12 +51,14 @@ void PlayStage::Render() {
 	Camera* camera = Camera::current;
 	Scene* scene = Game::instance->scene;
 
+
 	Matrix44 playerModel = scene->player.getModel();
-	scene->player.entity->model = playerModel;
+	scene->player.character_mesh->model = playerModel;
 
 	if (scene->cameraLocked) {
 		//camera following plane
-		Vector3 eye = playerModel * Vector3(0.0f, 3.0f, 3.0f);
+		Vector3 desiredEye = playerModel * Vector3(0, 3, 3);
+		Vector3 eye = scene->Lerp(camera->eye, desiredEye, 5.f * Game::instance->elapsed_time);
 		Vector3 center = playerModel * Vector3(0.0f, 0.0f, -5.0f);
 		Vector3 up = Vector3(0.0f, 1.0f, 0.0f);
 		if (scene->firstPerson) {
@@ -80,7 +82,7 @@ void PlayStage::Render() {
 
 	scene->groundMesh->render(); //suelo
 
-	scene->player.entity->render();//player
+	scene->player.character_mesh->render();//player
 
 	for (size_t i = 0; i < scene->entities.size(); i++)//entities added
 	{
@@ -92,40 +94,97 @@ void PlayStage::Render() {
 void PlayStage::Update(float seconds_elapsed) {
 	Scene* scene = Game::instance->scene;
 
-	if (scene->cameraLocked) {
-		float playerSpeed = 20.0f * seconds_elapsed;
-		float rotSpeed = 120.0f * seconds_elapsed;
+		//movement code
 
-		if (scene->firstPerson) {
-			scene->player.pitch += -Input::mouse_delta.y * 10.0f * seconds_elapsed;
-			scene->player.yaw += -Input::mouse_delta.x * 10.0f * seconds_elapsed;
-			Input::centerMouse();
-			SDL_ShowCursor(false);
+		float playerX = scene->player.pos[0];
+		float playerY = scene->player.pos[1];
+		float playerZ = scene->player.pos[2];
+
+		bool isRunning = false;
+		float walk_speed = 10.0f * seconds_elapsed;
+		float run_speed = 30.0f * seconds_elapsed;
+
+		scene->player.jumpLock = max(0.0f, scene->player.jumpLock - seconds_elapsed);
+
+		//sprint
+		if (Input::isKeyPressed(SDL_SCANCODE_LSHIFT)) isRunning = true;
+		float playerSpeed = (isRunning == true) ? run_speed : walk_speed;
+
+
+		//escalar tiempo para que vayan mas lentas las particulas
+		if (Input::isKeyPressed(SDL_SCANCODE_SPACE)) {
+			seconds_elapsed *= 0.2f;
 		}
-		else {
-			if (Input::isKeyPressed(SDL_SCANCODE_E)) scene->player.yaw += rotSpeed;
-			if (Input::isKeyPressed(SDL_SCANCODE_Q)) scene->player.yaw -= rotSpeed;
-		}
 
-		Matrix44 playerRotation;
-		playerRotation.rotate(scene->player.yaw * DEG2RAD, Vector3(0, 1, 0));
 
-		Vector3 forward = playerRotation.rotateVector(Vector3(0, 0, -1));
-		Vector3 right = playerRotation.rotateVector(Vector3(1, 0, 0));
+		if (scene->cameraLocked) {
+			//float playerSpeed = 20.0f * elapsed_time;
+			float rotSpeed = 120.0f * seconds_elapsed;
 
-		Vector3 playerVel;
+			if (scene->firstPerson) {
+				scene->player.pitch += -Input::mouse_delta.y * 10.0f * seconds_elapsed;
+				scene->player.yaw += -Input::mouse_delta.x * 10.0f * seconds_elapsed;
+				Input::centerMouse();
+				SDL_ShowCursor(false);
+			}
+			else {
+				if (Input::isKeyPressed(SDL_SCANCODE_E)) scene->player.yaw += rotSpeed;
+				if (Input::isKeyPressed(SDL_SCANCODE_Q)) scene->player.yaw -= rotSpeed;
+			}
 
-		if (Input::isKeyPressed(SDL_SCANCODE_W)) playerVel = playerVel + (forward * playerSpeed);
-		if (Input::isKeyPressed(SDL_SCANCODE_S)) playerVel = playerVel - (forward * playerSpeed);
-		if (Input::isKeyPressed(SDL_SCANCODE_D)) playerVel = playerVel + (right * playerSpeed);
-		if (Input::isKeyPressed(SDL_SCANCODE_A)) playerVel = playerVel - (right * playerSpeed);
+			Matrix44 playerRotation;
+			playerRotation.rotate(scene->player.yaw * DEG2RAD, Vector3(0, 1, 0));
 
-		Vector3 nextPos = scene->player.pos + playerVel;
+			Vector3 forward = playerRotation.rotateVector(Vector3(0, 0, -1));
+			Vector3 right = playerRotation.rotateVector(Vector3(1, 0, 0));
+			Vector3 up = playerRotation.rotateVector(Vector3(0, 1, 0));
+
+			Vector3 playerVel;
+
+			if (Input::isKeyPressed(SDL_SCANCODE_W)) playerVel = playerVel + (forward * playerSpeed);
+			if (Input::isKeyPressed(SDL_SCANCODE_S)) playerVel = playerVel - (forward * playerSpeed);
+			if (Input::isKeyPressed(SDL_SCANCODE_D)) playerVel = playerVel + (right * playerSpeed);
+			if (Input::isKeyPressed(SDL_SCANCODE_A)) playerVel = playerVel - (right * playerSpeed);
+
+			//player movement code
+			//jump
+			if (Input::wasKeyPressed(SDL_SCANCODE_C) && playerY <= 0.0f) {
+
+				scene->player.jumpLock = 0.3f;
+			}
+
+			if (scene->player.jumpLock != 0.0f) {
+				playerVel[1] += 0.15f;
+			}
+
+			if (playerY > 0.0f) {
+				playerVel[1] -= seconds_elapsed * 3;
+			}
+
+			Vector3 nextPos = scene->player.pos + playerVel;
+
+			//dash
+			Vector2 dash_dir = Vector2(playerX - nextPos[0], playerZ - nextPos[2]).normalize();
+			if (dash_dir.x != 0 || dash_dir.y != 0)scene->player.dash_direction = dash_dir;
+
+			//std::cout << scene->player.dash_direction.x << "  " << scene->player.dash_direction.y << std::endl;
+
+			Vector3 playerVec = scene->player.character_mesh->model.frontVector().normalize();
+			float sumX = 200.0 * scene->player.dash_direction.x;
+			float sumZ = 200.0 * scene->player.dash_direction.y;
+			if (Input::wasKeyPressed(SDL_SCANCODE_X)) {
+				playerVel[0] -= sumX;
+				playerVel[2] -= sumZ;
+			}
+
+			nextPos = scene->player.pos + playerVel;
+
+
 		
 		nextPos = scene->player.playerCollision(scene->entities, nextPos, seconds_elapsed);
 
 		scene->player.pos = nextPos;
-	}
+		}
 	
 }
 
@@ -133,6 +192,12 @@ void PlayStage::Update(float seconds_elapsed) {
 void EditorStage::Render() {
 
 	Scene* scene = Game::instance->scene;
+
+	glDisable(GL_DEPTH_TEST);
+	scene->skyMesh->render();//cielo
+	glEnable(GL_DEPTH_TEST);
+
+	scene->groundMesh->render(); //suelo
 
 	for (size_t i = 0; i < scene->entities.size(); i++)//entities added
 	{
@@ -152,11 +217,20 @@ void EditorStage::Update(float seconds_elapsed) {
 	if (Input::wasKeyPressed(SDL_SCANCODE_TAB)) {
 		scene->cameraLocked = !scene->cameraLocked;
 	}
+	
+	if (Input::wasKeyPressed(SDL_SCANCODE_F2)) {
+		scene->ExportMap(scene->entities);
+	}
+
+	if (Input::wasKeyPressed(SDL_SCANCODE_F3)) {
+		scene->ImportMap("data/maps/map1.scene",scene->entities);
+	}
 
 	if (Input::wasKeyPressed(SDL_SCANCODE_1)) scene->addEntityOnFront();  //debug to add sphere on front
-	if (Input::wasKeyPressed(SDL_SCANCODE_2)) scene->testCollisionOnFront(); //debug to see collision point on front (col in console)
-	if (Input::wasKeyPressed(SDL_SCANCODE_3)) scene->rotateSelected(10.0f);  //rotate selected item with 3
-	if (Input::wasKeyPressed(SDL_SCANCODE_4)) scene->rotateSelected(-10.0f);
+	if (Input::wasKeyPressed(SDL_SCANCODE_2)) scene->testCollisionOnFront(); //select with ray collision
+	if (Input::wasKeyPressed(SDL_SCANCODE_3)) scene->removeSelected(); //remove selected entity
+	if (Input::wasKeyPressed(SDL_SCANCODE_4)) scene->rotateSelected(10.0f);  //rotate selected item 
+	if (Input::wasKeyPressed(SDL_SCANCODE_5)) scene->rotateSelected(-10.0f);
 
 	//movement
 	if (Input::isKeyPressed(SDL_SCANCODE_LSHIFT)) speed *= 10; //move faster with left shift
@@ -172,20 +246,20 @@ void EditorStage::Update(float seconds_elapsed) {
 
 //MULTI STAGE
 void MultiStage::Render() {
-
+	//TO DO
 
 }
 
 void MultiStage::Update(float seconds_elapsed) {
-
+	//TO DO
 }
 
 //END STAGE
 
 void EndStage::Render() {
-	
+	//TO DO
 }
 
 void EndStage::Update(float seconds_elapsed) {
-	
+	//TO DO
 }
