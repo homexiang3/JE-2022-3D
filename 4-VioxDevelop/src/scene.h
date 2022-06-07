@@ -3,6 +3,8 @@
 #include "entity.h"
 #include "stage.h"
 #include "audio.h"
+#include "camera.h"
+#include "level.h"
 
 
 //Clase para guardar diferentes tipos de texturas y meshes utiles para reutilizar dentro de nuestro juego por ejemplo cosas del entorno que se repiten
@@ -24,43 +26,34 @@ public:
 	Scene();
 	~Scene();
 	//globals movidos de game (quizas se acaban borrando)
-	EntityMesh* skyMesh = NULL;
-	EntityMesh* groundMesh = NULL;
 	bool cameraLocked = true; //util para debug
 	Audio* audio = NULL;
-	sPlayer player;
 	bool firstPerson = false; //cambiar a true para vista en primera persona
-	//multiplayer vars
-	//sPlayer player2;
-	//Camera* camerap1;
-	//Camera* camerap2;
 	//props of our game
 	Prop props[20];
 	//Entity* root;
-	EntityMesh* selectedEntity = NULL;
-	int selectedEntityPos = 0;
-	STAGE_ID currentStage = STAGE_ID::PLAY;
+	STAGE_ID currentStage = STAGE_ID::EDITOR;
 	std::vector<Stage*> stages;
+	std::vector<PlayLevel*> levels;
+	EditorLevel* editor;
+	MultiLevel* multi;
+	//cosas que van en level
 	std::vector<EntityMesh*> entities;
 	std::vector<Entity*> s_to_destroy;//destroy vector
-	//poner todas las entities
-	// 
-	//metodos como entidades dentro de area..
-	void addEntityOnFront();
-	void testCollisionOnFront();
-	void rotateSelected(float angleDegree);
-	Vector3 getRayDir();
-	Vector3 getRayOrigin();
-	void removeSelected();
-	void removeEntities();
-	//cargar mapa
-	Vector3 ReadVector3(std::stringstream& ss);
-	void ImportMap(const char* path, std::vector<EntityMesh*>& entities);
-	void ExportMap(std::vector<EntityMesh*>& entities);
+	EntityMesh* skyMesh = NULL;
+	EntityMesh* groundMesh = NULL;
+
+	sPlayer player;
+
+	
 	//utils
 	Vector3 Lerp(Vector3 a, Vector3 b, float t);
 
 
 };
+//cargar mapa
+Vector3 ReadVector3(std::stringstream& ss);
+void ImportMap(const char* path, std::vector<EntityMesh*>& entities, EntityMesh*& groundMesh, EntityMesh*& skyMesh);
+void ExportMap(std::vector<EntityMesh*>& entities, EntityMesh* groundMesh, EntityMesh* skyMesh);
 
 

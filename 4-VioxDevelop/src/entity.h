@@ -60,6 +60,7 @@ public:
 
 //estructura para el player
 struct sPlayer {
+	Vector3 spawnPos;
 	Vector3 pos;
 	Vector3 vel;
 	float yaw = 0.0f;
@@ -70,44 +71,10 @@ struct sPlayer {
 	Vector2 dash_direction;
 	float jumpLock;
 
-	Matrix44 getModel() {
-		Matrix44 model;
-		model.translate(pos.x, pos.y, pos.z);
-		model.rotate(yaw * DEG2RAD, Vector3(0, 1, 0));
-		this->character_mesh->model = model;
-		return  model;
-	}
+	Matrix44 getModel();
+	void playerMovement(std::vector<EntityMesh*> entities, float seconds_elapsed, float rotSpeed, float playerSpeed);
+	Vector3 playerCollision(std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed);
 	
-	Vector3 playerCollision(std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed) {
-		//TEST COLLISIONS, HABRIA QUE TENER DINAMICAS - ESTATICAS, DINAMICAS - DINAMICAS, PLAYER - COSAS ETC...
-		//calculamos el centro de la esfera de colisión del player elevandola hasta la cintura
-		Vector3 character_center = nextPos + Vector3(0, 1, 0);
-
-		//para cada objecto de la escena...
-		for (size_t i = 0; i < entities.size(); i++)
-		{
-			EntityMesh* currentEntity = entities[i];
-			//comprobamos si colisiona el objeto con la esfera (radio 3)
-			Vector3 coll;
-			Vector3 collnorm;
-			if (!currentEntity->mesh->testSphereCollision(currentEntity->model, character_center, 0.5f, coll, collnorm))
-				continue; //si no colisiona, pasamos al siguiente objeto
-
-			//si la esfera está colisionando muevela a su posicion anterior alejandola del objeto
-			Vector3 push_away = normalize(coll - character_center) * seconds_elapsed;
-			nextPos = this->pos - push_away; //move to previous pos but a little bit further
-
-			//cuidado con la Y, si nuestro juego es 2D la ponemos a 0
-			nextPos.y = 0;
-
-			//reflejamos el vector velocidad para que de la sensacion de que rebota en la pared
-			//velocity = reflect(velocity, collnorm) * 0.95;
-
-			return nextPos;
-		}
-		
-		return nextPos;
-	}
 };
 
 /*otros ejemplos

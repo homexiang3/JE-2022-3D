@@ -4,26 +4,24 @@
 #include <fstream>
 #include <string>
 #include <iostream>
-
+#include "level.h"
 
 Scene::Scene()
 {
 	//init stages
 	InitStages(stages);
+
+	//init levels
+	InitLevels(levels, editor, multi);
 	
 	//charge audio
 	this->audio = new Audio();
 	//load entities
 	this->player.character_mesh = new EntityMesh(GL_TRIANGLES, "data/skelleton.obj", "data/minichar_tex.png", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
-	this->skyMesh = new EntityMesh(GL_TRIANGLES, "data/cielo.ASE", "data/cielo.tga", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
-	//load grass/ground
-	this->groundMesh = new EntityMesh(GL_TRIANGLES, "", "data/grass.tga", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
-	this->groundMesh->tiling = 200.0f;
-	this->groundMesh->mesh = new Mesh();
-	this->groundMesh->mesh->createPlane(1000);
 
 	//get objects
-	ImportMap("data/maps/map1.scene", entities);
+	ImportMap("data/maps/map1.scene", this->editor->entities, this->editor->groundMesh, this->editor->skyMesh);
+	
 	
 }
 
@@ -39,96 +37,16 @@ Prop::~Prop()
 
 }
 
-void Scene::addEntityOnFront() { 
 
-	Vector3 dir = getRayDir();
-	Vector3 rayOrigin = getRayOrigin();
-	
-	Vector3 spawnPos = RayPlaneCollision(Vector3(), Vector3(0,1,0), rayOrigin, dir);
-	Matrix44 model; 
-	model.translate(spawnPos.x, spawnPos.y, spawnPos.z);
-
-	EntityMesh* entity = new EntityMesh(GL_TRIANGLES,"data/building-shop-china.obj","data/color-atlas.png", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
-	entity->model = model;
-	
-
-	entities.push_back(entity);
-	
+Vector3 Scene::Lerp(Vector3 a, Vector3 b, float t) {
+	t = clamp(t, 0.0f, 1.0f);
+	Vector3 ab = b - a;
+	return a + (ab * t);
 }
 
-void Scene::testCollisionOnFront() { //revisar?
-
-	Vector3 dir = getRayDir();
-	Vector3 rayOrigin = getRayOrigin();
-	float min_dis = 10000.0f;
-	Camera* cam = Game::instance->camera;
-
-	for (size_t i = 0; i < this->entities.size(); i++)
-	{
-		EntityMesh* entity = entities[i];
-		Vector3 pos;
-		Vector3 normal;
-		if (entity->mesh->testRayCollision(entity->model, rayOrigin, dir, pos, normal)) {
-
-			Vector3 entityPos = entity->model.getTranslation();
-			float dis = cam->eye.distance(entityPos);
-			if (dis < min_dis) {
-				selectedEntity = entity;
-				selectedEntityPos = i;
-			}
-
-		}
-													
-	}
-}
-
-void Scene::rotateSelected(float angleDegree) {
-	if (this->selectedEntity == NULL) {
-		return;
-	}
-
-	this->selectedEntity->model.rotate(angleDegree * DEG2RAD, Vector3(0, 1, 0));
-}
-
-void Scene::removeSelected() {
-
-	if (this->selectedEntity == NULL) {
-		return;
-	}
-
-	this->entities.erase(this->entities.begin() + this->selectedEntityPos);
-	this->selectedEntity = NULL;
-}
-
-void Scene::removeEntities() {
-
-	while (!this->entities.empty())
-	{
-		this->entities.pop_back();
-	}
-}
-
-Vector3 Scene::getRayDir() {
-
-	Vector2 mouse = Input::mouse_position;
-	Game* g = Game::instance;
-	Camera* cam = g->camera;
-	Vector3 dir = cam->getRayDirection(mouse.x, mouse.y, g->window_width, g->window_height);
-
-	return dir;
-}
-
-Vector3 Scene::getRayOrigin() {
-
-	Game* g = Game::instance;
-	Camera* cam = g->camera;
-	Vector3 rayOrigin = cam->eye;
-
-	return rayOrigin;
-}
 
 //map functions
-Vector3 Scene::ReadVector3(std::stringstream& ss) {
+Vector3 ReadVector3(std::stringstream& ss) {
 	Vector3 vec;
 	ss >> vec.x;
 	if (ss.peek() == ',') ss.ignore();
@@ -137,14 +55,40 @@ Vector3 Scene::ReadVector3(std::stringstream& ss) {
 	ss >> vec.z;
 	return vec;
 }
-void Scene::ImportMap(const char* path, std::vector<EntityMesh*>& entities) {
+void ImportMap(const char* path, std::vector<EntityMesh*>& entities, EntityMesh*& groundMesh, EntityMesh*& skyMesh) {
 	//clear entities before import new map
-	this->removeEntities();
-	
+	//this->removeEntities();
+
 	//prepare file content
 	std::string content = "";
 	readFile(path, content);
 	std::stringstream ss(content);
+	
+	//read ground mesh
+	std::string groundTex;
+	ss >> groundTex;
+	float tiling;
+	ss >> tiling;
+	EntityMesh* ground = new EntityMesh(GL_TRIANGLES, "", groundTex, "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
+	ground->tiling = tiling;
+	ground->mesh = new Mesh();
+	ground->mesh->createPlane(1000); //un poco hardcoded pero funcional
+	groundMesh = ground;
+
+	//read sky mesh
+	std::string skyMeshPath;
+	ss >> skyMeshPath;
+	std::string skyTex;
+	ss >> skyTex;
+	Vector3 pos = ReadVector3(ss);
+	Vector3 rot = ReadVector3(ss);
+	//create entity
+	EntityMesh* sky = new EntityMesh(GL_TRIANGLES, skyMeshPath, skyTex, "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
+	Matrix44 model;
+	model.translate(pos.x, pos.y, pos.z);
+	model.setFrontAndOrthonormalize(rot);
+	sky->model = model;
+	skyMesh = sky;
 
 	while (!ss.eof()) {
 		//read values
@@ -155,22 +99,70 @@ void Scene::ImportMap(const char* path, std::vector<EntityMesh*>& entities) {
 		Vector3 pos = ReadVector3(ss);
 		Vector3 rot = ReadVector3(ss);
 		//create entity
-		EntityMesh* entity = new EntityMesh(GL_TRIANGLES, meshPath , texPath, "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
+		EntityMesh* entity = new EntityMesh(GL_TRIANGLES, meshPath, texPath, "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
 		Matrix44 model;
 		model.translate(pos.x, pos.y, pos.z);
 		model.setFrontAndOrthonormalize(rot);
 		entity->model = model;
 
 		entities.push_back(entity);
- 	}
+	}
+	std::cout << " + Success: Level imported" << std::endl;
 }
-void Scene::ExportMap(std::vector<EntityMesh*>& entities) {
+void ExportMap(std::vector<EntityMesh*>& entities, EntityMesh* groundMesh, EntityMesh* skyMesh) {
 	std::ofstream myfile;
-	myfile.open("data/maps/map1.scene");
+	std::string prefix = "data/maps/";
+	std::string mapPath = "";
+	std::cout << " + Please enter where do you want to export the file: ";
+	std::cin >> mapPath;
+	mapPath = prefix + mapPath;
+	std::cout << " + Exporting to "<< mapPath << std::endl;
+
+	myfile.open(mapPath);
 
 	if (!myfile) { // file couldn't be opened
-		std::cout << "Error: exported map could not be opened" << std::endl;
+		std::cout << " + Error: exported map could not be opened" << std::endl;
 		return;
+	}
+
+	if (groundMesh == NULL) {
+		std::cout << " + Error: exported map needs a ground" << std::endl;
+		return;
+	}
+	else {
+		EntityMesh* ground = groundMesh;
+		std::string texPath = ground->texturePath;
+		float tiling = ground->tiling;
+
+		if (entities.size() == 0) {
+			myfile << texPath << " " << tiling;
+		}
+		else {
+			myfile << texPath << " " << tiling << "\n";
+		}
+	}
+
+	if (skyMesh == NULL) {
+		std::cout << " + Error: exported map needs a sky" << std::endl;
+		return;
+	}
+	else {
+
+		EntityMesh* sky = skyMesh;
+		std::string meshPath = sky->meshPath;
+		std::string texPath = sky->texturePath;
+
+		Vector3 pos = sky->model.getTranslation();
+		//esta bien la rotacion?
+		Vector3 rot = sky->model.frontVector().normalize();
+
+
+		if (entities.size() == 0) {
+			myfile << meshPath << " " << texPath << " " << pos.x << "," << pos.y << "," << pos.z << " " << rot.x << "," << rot.y << "," << rot.z;
+		}
+		else {
+			myfile << meshPath << " " << texPath << " " << pos.x << "," << pos.y << "," << pos.z << " " << rot.x << "," << rot.y << "," << rot.z << "\n";
+		}
 	}
 
 	for (size_t i = 0; i < entities.size(); i++)
@@ -183,7 +175,7 @@ void Scene::ExportMap(std::vector<EntityMesh*>& entities) {
 		Vector3 pos = entity->model.getTranslation();
 		//esta bien la rotacion?
 		Vector3 rot = entity->model.frontVector().normalize();
-		
+
 
 		if (i == entities.size() - 1) {
 			myfile << meshPath << " " << texPath << " " << pos.x << "," << pos.y << "," << pos.z << " " << rot.x << "," << rot.y << "," << rot.z;
@@ -192,12 +184,6 @@ void Scene::ExportMap(std::vector<EntityMesh*>& entities) {
 			myfile << meshPath << " " << texPath << " " << pos.x << "," << pos.y << "," << pos.z << " " << rot.x << "," << rot.y << "," << rot.z << "\n";
 		}
 	}
-
+	std::cout << " + Success: Level exported" << std::endl;
 	myfile.close();
-}
-
-Vector3 Scene::Lerp(Vector3 a, Vector3 b, float t) {
-	t = clamp(t, 0.0f, 1.0f);
-	Vector3 ab = b - a;
-	return a + (ab * t);
 }
