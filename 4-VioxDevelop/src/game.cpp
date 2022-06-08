@@ -80,6 +80,12 @@ void Game::render(void)
 	//render current stage
 	GetCurrentStage(scene->currentStage, scene->stages)->Render();
 
+	//reset camera
+	camera->aspect = window_width / window_height;
+	camera->enable();
+	glViewport(0, 0, window_width, window_height); 
+	
+
 	//Draw the floor grid
 	drawGrid();
 
@@ -120,7 +126,7 @@ void Game::onKeyDown( SDL_KeyboardEvent event )
 	switch(event.keysym.sym)
 	{
 		case SDLK_ESCAPE: must_exit = true; break; //ESC key, kill the app
-		case SDLK_F1: Shader::ReloadAll(); break; 
+		//case SDLK_F1: Shader::ReloadAll(); break; 
 	}
 }
 

@@ -6,6 +6,7 @@ enum EDITOR_ID {
 	GROUND = 0,
 	SKY = 1,
 	OBJECT = 2,
+	EDIT = 3
 };
 
 class Level {
@@ -21,7 +22,7 @@ public:
 
 class EditorLevel : public Level{
 public:
-	
+	EditorLevel();
 	EntityMesh* selectedEntity = NULL;
 	int selectedEntityPos = 0;
 	EDITOR_ID currentOption = GROUND;
@@ -30,17 +31,19 @@ public:
 	void Update(float seconds_elapsed);
 	void removeEntities();
 	void removeSelected();
-	void addEntityOnFront();
+	void addEntityOnFront(const char* mesh, const char* tex);
 	void testCollisionOnFront();
 	void rotateSelected(float angleDegree);
 	Vector3 getRayDir();
 	Vector3 getRayOrigin();
+	void moveSelected(float speed);
 };
 
 class PlayLevel : public Level {
 public:
-	
-	sPlayer* player;
+	PlayLevel(const char* map);
+
+	sPlayer* player = NULL;
 	std::vector<sPlayer*> enemies;
 
 	void Render();
@@ -50,14 +53,17 @@ public:
 
 class MultiLevel : public Level{
 public:
-	
-	sPlayer* player1;
-	sPlayer* player2;
-	Camera* cam1;
-	Camera* cam2;
+	MultiLevel();
+
+	sPlayer* player1 = NULL;
+	sPlayer* player2 = NULL;
+	Camera* cam1 = NULL;
+	Camera* cam2 = NULL;
 
 	void Render();
 	void Update(float seconds_elapsed);
+	void RenderWorld(Camera* cam);
+	void RenderMinimap();
 
 };
 

@@ -17,16 +17,20 @@ EntityMesh::EntityMesh(int primitive, std::string meshPath, std::string textureP
 
 	if (!meshPath.empty()) {
 		this->mesh = Mesh::Get(meshPath.c_str());
+		this->meshPath = meshPath;
 	}
-	this->texture = Texture::Get(texturePath.c_str());
+	if (!texturePath.empty()) {
+		this->texture = Texture::Get(texturePath.c_str());
+		this->texturePath = texturePath;
+	}
+	
 	this->shader = Shader::Get(shaderPath1, shaderPath2);
 	this->color = color;
 	this->tiling = 1.0f;
-	this->meshPath = meshPath;
 	this->texturePath = texturePath;
 }
 
-void Entity::render() {
+void Entity::render(Camera* cam) {
 	//if it was entity mesh, Matrix44 model = getGlobalMatrix(), render code...
 	Camera* camera = Camera::current;
 	Matrix44 model = this->model;
@@ -34,7 +38,7 @@ void Entity::render() {
 
 	for (int i = 0; i < children.size(); i++)
 	{
-		children[i]->render(); //repeat for each child
+		children[i]->render(cam); //repeat for each child
 	}
 }
 
@@ -59,7 +63,7 @@ Matrix44 Entity::getGlobalMatrix() { //recursive get matrix of parents
 
 //Render del entitymesh para pintar el objeto
 
-void EntityMesh::render() {
+void EntityMesh::render(Camera* camera) {
 
 	Shader* a_shader = this->shader;
 	Mesh* a_mesh = this->mesh;
@@ -69,13 +73,11 @@ void EntityMesh::render() {
 
 	//comprueba que esten cargados
 	assert(a_mesh != NULL, "mesh in Entity Render was null"); //debug
-	assert(tex != NULL, "tex in Entity Render was null");
 	assert(a_shader != NULL, "shader in Entity Render was null");
 
 	if (!a_shader) return;
 
 	//get the last camera that was activated
-	Camera* camera = Camera::current;
 	Matrix44 model = this->model;
 	BoundingBox aabb = this->aabb;
 	int primitive = this->primitive;
@@ -97,7 +99,7 @@ void EntityMesh::render() {
 		//enable shader and pass uniforms optimizar todo lo que se pueda
 		a_shader->enable(); //esta parte se puede optimizar si son iguales los shaders..
 		a_shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
-		
+		std::cout << tex << std::endl;
 		if (tex != NULL) {
 			a_shader->setUniform("u_texture", tex, 0);
 		}
@@ -166,6 +168,7 @@ Vector3 sPlayer::playerCollision(std::vector<EntityMesh*> entities, Vector3 next
 	return nextPos;
 }
 
+
 void sPlayer::playerMovement(std::vector<EntityMesh*> entities,float seconds_elapsed, float rotSpeed, float playerSpeed) {
 
 
@@ -219,4 +222,26 @@ void sPlayer::playerMovement(std::vector<EntityMesh*> entities,float seconds_ela
 	nextPos = this->playerCollision(entities, nextPos, seconds_elapsed);
 
 	this->pos = nextPos;
+}
+
+void sPlayer::npcMovement(sPlayer* player, float seconds_elapsed) {
+
+	Matrix44 npcModel = this->getModel();
+	Vector3 side = npcModel.rotateVector(Vector3(1, 0, 0)).normalize();
+	Vector3 forward = npcModel.rotateVector(Vector3(0, 0, -1)).normalize();
+
+	Vector3 toTarget = player->pos - this->pos;
+	float dist = toTarget.length();
+	toTarget.normalize();
+
+	float sideDot = side.dot(toTarget);
+	float forwardDot = forward.dot(toTarget);
+
+	if (forwardDot < 0.98f) {
+		this->yaw += 90.0f * sign(sideDot) * seconds_elapsed;
+	}
+
+	if (dist > 4.0f) {
+		this->pos = this->pos + (forward * 2.0f * seconds_elapsed);
+	}
 }

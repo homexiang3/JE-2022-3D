@@ -16,13 +16,7 @@ Scene::Scene()
 	
 	//charge audio
 	this->audio = new Audio();
-	//load entities
-	this->player.character_mesh = new EntityMesh(GL_TRIANGLES, "data/skelleton.obj", "data/minichar_tex.png", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
-
-	//get objects
-	ImportMap("data/maps/map1.scene", this->editor->entities, this->editor->groundMesh, this->editor->skyMesh);
-	
-	
+		
 }
 
 Scene::~Scene()
@@ -38,12 +32,15 @@ Prop::~Prop()
 }
 
 
-Vector3 Scene::Lerp(Vector3 a, Vector3 b, float t) {
+Vector3 Lerp(Vector3 a, Vector3 b, float t) {
 	t = clamp(t, 0.0f, 1.0f);
 	Vector3 ab = b - a;
 	return a + (ab * t);
 }
 
+float sign(float value) {
+	return value >= 0.0f ? 1.0f : -1.0f;
+}
 
 //map functions
 Vector3 ReadVector3(std::stringstream& ss) {
@@ -56,8 +53,6 @@ Vector3 ReadVector3(std::stringstream& ss) {
 	return vec;
 }
 void ImportMap(const char* path, std::vector<EntityMesh*>& entities, EntityMesh*& groundMesh, EntityMesh*& skyMesh) {
-	//clear entities before import new map
-	//this->removeEntities();
 
 	//prepare file content
 	std::string content = "";
@@ -90,6 +85,7 @@ void ImportMap(const char* path, std::vector<EntityMesh*>& entities, EntityMesh*
 	sky->model = model;
 	skyMesh = sky;
 
+	//read entities
 	while (!ss.eof()) {
 		//read values
 		std::string meshPath;

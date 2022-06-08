@@ -32,22 +32,12 @@ public:
 	//props of our game
 	Prop props[20];
 	//Entity* root;
-	STAGE_ID currentStage = STAGE_ID::EDITOR;
+	STAGE_ID currentStage = STAGE_ID::PLAY;
+	int currentLevel = 0;
 	std::vector<Stage*> stages;
 	std::vector<PlayLevel*> levels;
 	EditorLevel* editor;
 	MultiLevel* multi;
-	//cosas que van en level
-	std::vector<EntityMesh*> entities;
-	std::vector<Entity*> s_to_destroy;//destroy vector
-	EntityMesh* skyMesh = NULL;
-	EntityMesh* groundMesh = NULL;
-
-	sPlayer player;
-
-	
-	//utils
-	Vector3 Lerp(Vector3 a, Vector3 b, float t);
 
 
 };
@@ -56,4 +46,6 @@ Vector3 ReadVector3(std::stringstream& ss);
 void ImportMap(const char* path, std::vector<EntityMesh*>& entities, EntityMesh*& groundMesh, EntityMesh*& skyMesh);
 void ExportMap(std::vector<EntityMesh*>& entities, EntityMesh* groundMesh, EntityMesh* skyMesh);
 
-
+//utils
+Vector3 Lerp(Vector3 a, Vector3 b, float t);
+float sign(float value);

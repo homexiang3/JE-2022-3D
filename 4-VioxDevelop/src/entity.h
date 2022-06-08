@@ -4,6 +4,7 @@
 #include "mesh.h"
 #include "texture.h"
 #include "shader.h"
+#include "camera.h"
 
 //clase base de la entidad
 
@@ -22,7 +23,7 @@ public:
 	//bool destroyed = false if we want to ignore actions for destroyed entities on destroyed vectors
 
 	//methods overwritten
-	virtual void render();
+	virtual void render(Camera* camera);
 	virtual void update(float elapsed_time);
 
 	//useful methods
@@ -45,16 +46,16 @@ public:
 	EntityMesh(int primitive, std::string meshPath, std::string texturePath, char* shaderPath, char* shaderPath2, Vector4 color);
 	//Attributes of this class 
 	int primitive;
-	Mesh* mesh;
-	Texture* texture;
-	Shader* shader; //si acabamos utilizando uno se podria opitimizar mucho quitandolo de aqui y llamarlo solo en el render de game
+	Mesh* mesh = NULL;
+	Texture* texture = NULL;
+	Shader* shader = NULL; //si acabamos utilizando uno se podria opitimizar mucho quitandolo de aqui y llamarlo solo en el render de game
 	Vector4 color;
 	std::string meshPath;
 	std::string texturePath;
 	float tiling;
 
 	//methods overwritten 
-	void render();
+	void render(Camera* camera);
 	void update(float dt);
 };
 
@@ -74,6 +75,7 @@ struct sPlayer {
 	Matrix44 getModel();
 	void playerMovement(std::vector<EntityMesh*> entities, float seconds_elapsed, float rotSpeed, float playerSpeed);
 	Vector3 playerCollision(std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed);
+	void npcMovement(sPlayer* player, float seconds_elapsed);
 	
 };
 
