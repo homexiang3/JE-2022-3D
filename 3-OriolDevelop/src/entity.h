@@ -4,6 +4,7 @@
 #include "mesh.h"
 #include "texture.h"
 #include "shader.h"
+#include "animation.h"
 
 //clase base de la entidad
 
@@ -42,20 +43,93 @@ public:
 
 class EntityMesh : public Entity {
 public:
-	EntityMesh(int primitive, char* meshPath, char* texturePath, char* shaderPath, char* shaderPath2, Vector4 color);
+	EntityMesh(int primitive, const char* meshPath, const char* texturePath, char* shaderPath, char* shaderPath2, Vector4 color);
 	//Attributes of this class 
 	int primitive;
 	Mesh* mesh;
 	Texture* texture;
 	Shader* shader; //si acabamos utilizando uno se podria opitimizar mucho quitandolo de aqui y llamarlo solo en el render de game
 	Vector4 color;
+	const char* meshPath;
+	const char* texturePath;
 	float tiling;
 
+	//anims
+	Animation* anim;
+
 	//methods overwritten 
-	void render();
+	void render(Animation* animSK);
 	void update(float dt);
 };
 
+//estructura para el player
+struct sPlayer {
+	Vector3 pos;
+	Vector3 vel;
+	float yaw = 0.0f;
+	float pitch = 0.0f; //para el first person
+	float radius = 10.0f; //por si queremos hacer bounding con colisions
+	int health;
+	EntityMesh* character_mesh;
+	Vector2 dash_direction;
+	float jumpLock;
+	int ctr = 0;
+
+
+	std::vector<Animation*> anims;
+	//animations
+	Animation* idle = Animation::Get("data/anims/idle.skanim");
+	Animation* walk = Animation::Get("data/anims/walk.skanim");
+	Animation* run = Animation::Get("data/anims/run.skanim");
+	
+	void initAnims() {
+		this->anims.push_back(this->idle);
+		this->anims.push_back(this->walk);
+		this->anims.push_back(this->run);
+	}
+
+	float playerVel;
+
+	Matrix44 getModel() {
+		Matrix44 model;
+		model.translate(pos.x, pos.y, pos.z);
+		model.rotate(yaw * DEG2RAD, Vector3(0, 1, 0));
+		
+		this->character_mesh->model = model;
+		return  model;
+	}
+	
+	Vector3 playerCollision(std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed) {
+		//TEST COLLISIONS, HABRIA QUE TENER DINAMICAS - ESTATICAS, DINAMICAS - DINAMICAS, PLAYER - COSAS ETC...
+		//calculamos el centro de la esfera de colisión del player elevandola hasta la cintura
+		Vector3 character_center = nextPos + Vector3(0, 1, 0);
+
+		//para cada objecto de la escena...
+		for (size_t i = 0; i < entities.size(); i++)
+		{
+			EntityMesh* currentEntity = entities[i];
+			//comprobamos si colisiona el objeto con la esfera (radio 3)
+			Vector3 coll;
+			Vector3 collnorm;
+			if (!currentEntity->mesh->testSphereCollision(currentEntity->model, character_center, 0.5f, coll, collnorm))
+				continue; //si no colisiona, pasamos al siguiente objeto
+
+			//si la esfera está colisionando muevela a su posicion anterior alejandola del objeto
+			Vector3 push_away = normalize(coll - character_center) * seconds_elapsed;
+			nextPos = this->pos - push_away; //move to previous pos but a little bit further
+
+			//cuidado con la Y, si nuestro juego es 2D la ponemos a 0
+			nextPos.y = 0;
+
+			//reflejamos el vector velocidad para que de la sensacion de que rebota en la pared
+			//velocity = reflect(velocity, collnorm) * 0.95;
+
+			return nextPos;
+		}
+		
+		return nextPos;
+	}
+};
 
 /*otros ejemplos
 
