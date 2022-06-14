@@ -2,7 +2,7 @@
 
 #include "entity.h"
 #include "stage.h"
-
+#include "extra/bass.h"
 
 //Clase para guardar diferentes tipos de texturas y meshes utiles para reutilizar dentro de nuestro juego por ejemplo cosas del entorno que se repiten
 class Prop
@@ -51,6 +51,10 @@ public:
 	//utils
 	Vector3 Lerp(Vector3 a, Vector3 b, float t);
 
+	//audio
+	std::vector<HSAMPLE> samples;
+	void PlayGameSound(int pos);
+	void LoadSample(const char* fileName);
 
 };
 

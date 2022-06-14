@@ -76,41 +76,43 @@ void PlayStage::Render() {
 		camera->lookAt(eye, center, up);
 	}
 	//rescale model for animation (it was a giant ) 
-	playerModel.scale(0.015, 0.015, 0.015);
-	playerModel.rotate(180 * DEG2RAD, Vector3(0,1,0));
+	playerModel.scale(scene->player.side * 0.015, 0.015, 0.015);
+	//playerModel.rotate(180 * DEG2RAD, Vector3(0,1,0));
 	scene->player.character_mesh->model = playerModel;
 
 	//animations 
 	float time = getTime() * 0.001;
 	
-	float t = fmod(time, scene->player.run->duration) / scene->player.run->duration;
+	float t = fmod(time, scene->player.idle->duration) / scene->player.run->duration;
 	/*
 	scene->player.walk->assignTime(t * scene->player.walk->duration);
 	scene->player.run->assignTime(t * scene->player.run->duration);
 	scene->player.idle->assignTime(time * scene->player.idle->duration);
 	*/
 	for (int i = 0; i < scene->player.anims.size(); i++) {
-		scene->player.anims[i]->assignTime(time);
+		if (i==3 || i==6 ) scene->player.anims[i]->assignTime(time * 1.8);
+		else scene->player.anims[i]->assignTime(time);
 	}
-
+	
 	Animation* FinalAnim = scene->player.anims[scene->player.ctr];
+	//blendSkeleton(&scene->player.anims[0]->skeleton, &scene->player.anims[scene->player.ctr]->skeleton, 0.3f, &FinalAnim->skeleton);
 	
 	//float velFactor = scene->player.playerVel
 
 	//Render
 	//scene->skyMesh->model.setTranslation(camera->eye.x, camera->eye.y - 20.0f, camera->eye.z); solo usarlo si el mapa fuera muy grande
 	glDisable(GL_DEPTH_TEST);
-	scene->skyMesh->render(NULL);//cielo
+	scene->skyMesh->render(FinalAnim->skeleton, false);//cielo
 	glEnable(GL_DEPTH_TEST);
 
-	scene->groundMesh->render(NULL); //suelo
+	scene->groundMesh->render(FinalAnim->skeleton, false); //suelo
 
-	scene->player.character_mesh->render(FinalAnim);//player
+	scene->player.character_mesh->render(FinalAnim->skeleton, true);//player
 
 	for (size_t i = 0; i < scene->entities.size(); i++)//entities added
 	{
 		EntityMesh* entity = scene->entities[i];
-		entity->render(NULL);
+		entity->render(FinalAnim->skeleton, false);
 	}
 }
 
@@ -128,8 +130,22 @@ void PlayStage::Update(float seconds_elapsed) {
 		float run_speed = 30.0f * seconds_elapsed;
 
 		scene->player.jumpLock = max(0.0f, scene->player.jumpLock - seconds_elapsed);
+		scene->player.animTimer = max(0.0f, scene->player.animTimer - seconds_elapsed);
+
+
+		//punch 
+		if (Input::wasKeyPressed(SDL_SCANCODE_Z) && scene->player.animTimer <= 0.2f) {
+			scene->player.side = scene->player.side * -1;
+			ChangeAnim(3 , scene->player.anims[3]->duration / 1.8 - 0.05);
+			scene->PlayGameSound(0);
+		}
+
+		if (Input::wasKeyPressed(SDL_SCANCODE_V) && scene->player.animTimer <= 0.2f) {
+			scene->player.side = scene->player.side * -1;
+			ChangeAnim(4 , scene->player.anims[4]->duration);
+		}
 		
-		scene->player.ctr = 0;
+		if (scene->player.animTimer <= 0.0f) ChangeAnim(0, NULL);
 		//sprint
 		if (Input::isKeyPressed(SDL_SCANCODE_LSHIFT)) isRunning = true;
 			
@@ -167,25 +183,25 @@ void PlayStage::Update(float seconds_elapsed) {
 
 			Vector3 playerVel;
 
-			if (Input::isKeyPressed(SDL_SCANCODE_W))
+			if (Input::isKeyPressed(SDL_SCANCODE_W) && scene->player.ctr != 5)
 			{
 				playerVel = playerVel + (forward * scene->player.playerVel);
-				scene->player.ctr = 1;
+				ChangeAnim(1, NULL);
 			}
-			if (Input::isKeyPressed(SDL_SCANCODE_S)) {
+			if (Input::isKeyPressed(SDL_SCANCODE_S) && scene->player.ctr != 5) {
 				playerVel = playerVel - (forward * scene->player.playerVel);
-				scene->player.ctr = 1;
+				ChangeAnim(1, NULL);
 			}
 			if (Input::isKeyPressed(SDL_SCANCODE_D)) playerVel = playerVel + (right * scene->player.playerVel);
 			if (Input::isKeyPressed(SDL_SCANCODE_A)) playerVel = playerVel - (right * scene->player.playerVel);
 
-			if (Input::isKeyPressed(SDL_SCANCODE_LSHIFT)) scene->player.ctr = 2;// run anim
+			if (Input::isKeyPressed(SDL_SCANCODE_LSHIFT)) ChangeAnim(2, NULL);// run anim
 
 			//player movement code
 			//jump
 			if (Input::wasKeyPressed(SDL_SCANCODE_C) && playerY <= 0.0f) {
-
 				scene->player.jumpLock = 0.3f;
+				ChangeAnim(6, 0.8f);
 			}
 
 			if (scene->player.jumpLock != 0.0f) {
@@ -205,22 +221,31 @@ void PlayStage::Update(float seconds_elapsed) {
 			//std::cout << scene->player.dash_direction.x << "  " << scene->player.dash_direction.y << std::endl;
 
 			Vector3 playerVec = scene->player.character_mesh->model.frontVector().normalize();
-			float sumX = 200.0 * scene->player.dash_direction.x;
-			float sumZ = 200.0 * scene->player.dash_direction.y;
+			float sumX = 20.0 * scene->player.dash_direction.x;
+			float sumZ = 20.0 * scene->player.dash_direction.y;
+			if (scene->player.ctr == 5) {
+				playerVel[0] -= sumX;
+				playerVel[2] -= sumZ;
+			}
 			if (Input::wasKeyPressed(SDL_SCANCODE_X)) {
 				playerVel[0] -= sumX;
 				playerVel[2] -= sumZ;
+				ChangeAnim(5, 0.25f);
 			}
 
 			nextPos = scene->player.pos + playerVel;
 
-
-		
 		nextPos = scene->player.playerCollision(scene->entities, nextPos, seconds_elapsed);
 
 		scene->player.pos = nextPos;
 		}
 	
+}
+
+void ChangeAnim(int i , float time) {
+	Scene* scene = Game::instance->scene;
+	if(scene->player.animTimer <=0.0f) scene->player.ctr = i;
+	if(time != NULL) scene->player.animTimer =time;
 }
 
 //EDITOR STAGE

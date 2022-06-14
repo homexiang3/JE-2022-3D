@@ -58,7 +58,7 @@ public:
 	Animation* anim;
 
 	//methods overwritten 
-	void render(Animation* animSK);
+	void render(Skeleton animSK , boolean flag);
 	void update(float dt);
 };
 
@@ -73,19 +73,30 @@ struct sPlayer {
 	EntityMesh* character_mesh;
 	Vector2 dash_direction;
 	float jumpLock;
-	int ctr = 0;
+	
 
-
-	std::vector<Animation*> anims;
 	//animations
+	std::vector<Animation*> anims;
 	Animation* idle = Animation::Get("data/anims/idle.skanim");
 	Animation* walk = Animation::Get("data/anims/walk.skanim");
 	Animation* run = Animation::Get("data/anims/run.skanim");
-	
+	Animation* left_puch = Animation::Get("data/anims/left_punch.skanim");
+	Animation* kick = Animation::Get("data/anims/kick.skanim");
+	Animation* dash = Animation::Get("data/anims/dash.skanim");
+	Animation* jump = Animation::Get("data/anims/jump.skanim");
+
+	int ctr = 0;
+	float animTimer=0.0f;
+	int side = -1;
+
 	void initAnims() {
 		this->anims.push_back(this->idle);
 		this->anims.push_back(this->walk);
 		this->anims.push_back(this->run);
+		this->anims.push_back(this->left_puch);
+		this->anims.push_back(this->kick);
+		this->anims.push_back(this->dash);
+		this->anims.push_back(this->jump);
 	}
 
 	float playerVel;

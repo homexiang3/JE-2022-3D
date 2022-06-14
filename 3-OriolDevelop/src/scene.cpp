@@ -22,7 +22,14 @@ Scene::Scene()
 
 	//get objects
 	ImportMap("data/maps/map1.scene", entities);
+
+	//audio
 	
+	if (BASS_Init(-1, 44100, 0, 0, NULL) == false){ //-1 significa usar el por defecto del sistema operativo
+		std::cout << "ERROR initializing audio" << std::endl; 
+	}
+	this->LoadSample("data/music/sfx_enter.wav");
+
 }
 
 Scene::~Scene()
@@ -173,4 +180,31 @@ Vector3 Scene::Lerp(Vector3 a, Vector3 b, float t) {
 	t = clamp(t, 0.0f, 1.0f);
 	Vector3 ab = b - a;
 	return a + (ab * t);
+}
+
+void Scene::PlayGameSound(int pos )
+{
+	//El handler para un sample
+	HSAMPLE hSample = this->samples[pos];
+
+	HCHANNEL hSampleChannel = BASS_SampleGetChannel(hSample, false);
+
+	//Lanzamos un sample
+	BASS_ChannelPlay(hSampleChannel, true);
+}
+
+void Scene::LoadSample(const char* fileName)
+{
+	//El handler para un sample
+	HSAMPLE hSample;
+
+	//use BASS_SAMPLE_LOOP in the last param to have a looped sound
+	hSample = BASS_SampleLoad(false, fileName, 0, 0, 3, 0);
+
+	if (hSample == 0)
+	{
+		std::cout << "+Error load  " << fileName << std::endl;
+	}
+	std::cout << "+AUDIO load" << fileName << std::endl;
+	this->samples.push_back(hSample);
 }

@@ -60,7 +60,7 @@ Matrix44 Entity::getGlobalMatrix() { //recursive get matrix of parents
 
 //Render del entitymesh para pintar el objeto
 
-void EntityMesh::render(Animation* animSK) {
+void EntityMesh::render(Skeleton animSK, boolean flag) {
 	
 	Shader* a_shader = this->shader;
 	Mesh* a_mesh = this->mesh;
@@ -125,7 +125,7 @@ void EntityMesh::render(Animation* animSK) {
 		
 		
 		//add animation
-		if (animSK !=NULL) a_mesh->renderAnimated(GL_TRIANGLES, &animSK->skeleton);
+		if (flag) a_mesh->renderAnimated(GL_TRIANGLES, &animSK);
 		else a_mesh->render(primitive);
 		a_mesh->renderBounding(model); //añade 2 DC adicionales a cada mesh
 		a_shader->disable();
