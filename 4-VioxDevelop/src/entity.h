@@ -63,19 +63,20 @@ public:
 struct sPlayer {
 	Vector3 spawnPos;
 	Vector3 pos;
-	Vector3 vel;
+	//Vector3 vel;
+	float speed;
 	float yaw = 0.0f;
-	float pitch = 0.0f; //para el first person
-	float radius = 10.0f; //por si queremos hacer bounding con colisions
+	//float pitch = 0.0f; //para el first person
+	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision)
 	int health;
 	EntityMesh* character_mesh;
 	Vector2 dash_direction;
 	float jumpLock;
 
 	Matrix44 getModel();
-	void playerMovement(std::vector<EntityMesh*> entities, float seconds_elapsed, float rotSpeed, float playerSpeed);
-	Vector3 playerCollision(std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed);
-	void npcMovement(sPlayer* player, float seconds_elapsed);
+	void playerMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, float seconds_elapsed, bool multi);
+	Vector3 playerCollision(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed);
+	void npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities,sPlayer* player, float seconds_elapsed);
 	
 };
 

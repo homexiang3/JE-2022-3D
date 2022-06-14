@@ -81,7 +81,6 @@ void EntityMesh::render(Camera* camera) {
 	Matrix44 model = this->model;
 	BoundingBox aabb = this->aabb;
 	int primitive = this->primitive;
-
 	aabb = transformBoundingBox(model, a_mesh->box);
 
 	/*distance check for flod
@@ -99,9 +98,10 @@ void EntityMesh::render(Camera* camera) {
 		//enable shader and pass uniforms optimizar todo lo que se pueda
 		a_shader->enable(); //esta parte se puede optimizar si son iguales los shaders..
 		a_shader->setUniform("u_viewprojection", camera->viewprojection_matrix);
-		std::cout << tex << std::endl;
+		
 		if (tex != NULL) {
 			a_shader->setUniform("u_texture", tex, 0);
+			a_shader->setUniform("u_tex_tiling", tiling);
 		}
 
 		a_shader->setUniform("u_color", color);
@@ -110,7 +110,7 @@ void EntityMesh::render(Camera* camera) {
 		mesh->enableBuffers(a_shader);
 		//parte dinamica que se tendria q pintar diferente en cada objeto
 		a_shader->setUniform("u_model", model);
-		a_shader->setUniform("u_tex_tiling", tiling);
+		
 		//render the mesh using the shader
 		a_mesh->render(primitive);
 
@@ -119,7 +119,7 @@ void EntityMesh::render(Camera* camera) {
 		a_shader->disable();
 
 		//debug to see bounding box 
-		a_mesh->renderBounding(model); //añade 2 DC adicionales a cada mesh
+		//a_mesh->renderBounding(model); //añade 2 DC adicionales a cada mesh
 	}
 }
 
@@ -137,7 +137,7 @@ Matrix44 sPlayer::getModel() {
 	return  model;
 }
 
-Vector3 sPlayer::playerCollision(std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed) {
+Vector3 sPlayer::playerCollision(std::vector<sPlayer*> enemies,  std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed) {
 	//TEST COLLISIONS, HABRIA QUE TENER DINAMICAS - ESTATICAS, DINAMICAS - DINAMICAS, PLAYER - COSAS ETC...
 	//calculamos el centro de la esfera de colisión del player elevandola hasta la cintura
 	Vector3 character_center = nextPos + Vector3(0, 1, 0);
@@ -149,7 +149,7 @@ Vector3 sPlayer::playerCollision(std::vector<EntityMesh*> entities, Vector3 next
 		//comprobamos si colisiona el objeto con la esfera (radio 3)
 		Vector3 coll;
 		Vector3 collnorm;
-		if (!currentEntity->mesh->testSphereCollision(currentEntity->model, character_center, 0.5f, coll, collnorm))
+		if (!currentEntity->mesh->testSphereCollision(currentEntity->model, character_center, this->radius , coll, collnorm))
 			continue; //si no colisiona, pasamos al siguiente objeto
 
 		//si la esfera está colisionando muevela a su posicion anterior alejandola del objeto
@@ -165,13 +165,58 @@ Vector3 sPlayer::playerCollision(std::vector<EntityMesh*> entities, Vector3 next
 		return nextPos;
 	}
 
+	//para cada enemigo...
+	for (size_t i = 0; i < enemies.size(); i++)
+	{
+		sPlayer* currentEnemy = enemies[i];
+		//comprobamos si colisiona el objeto con la esfera (radio 3)
+		Vector3 coll;
+		Vector3 collnorm;
+		EntityMesh* enemyEntity = currentEnemy->character_mesh;
+		if (!enemyEntity->mesh->testSphereCollision(enemyEntity->model, character_center, this->radius , coll, collnorm))
+			continue; //si no colisiona, pasamos al siguiente objeto
+
+		//si la esfera está colisionando muevela a su posicion anterior alejandola del objeto
+		Vector3 push_away = normalize(coll - character_center) * seconds_elapsed;
+		nextPos = this->pos - push_away;
+
+		//cuidado con la Y, si nuestro juego es 2D la ponemos a 0
+		nextPos.y = 0;
+
+		//reflejamos el vector velocidad para que de la sensacion de que rebota en la pared
+		//velocity = reflect(velocity, collnorm) * 0.95;
+
+		return nextPos;
+	}
+
 	return nextPos;
 }
 
 
-void sPlayer::playerMovement(std::vector<EntityMesh*> entities,float seconds_elapsed, float rotSpeed, float playerSpeed) {
+void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMesh*> entities,float seconds_elapsed, bool multi) {
+
+	bool isRunning = false;
+	float walk_speed = 10.0f * seconds_elapsed;
+	float run_speed = 20.0f * seconds_elapsed;
+
+	this->jumpLock = max(0.0f, this->jumpLock - seconds_elapsed);
+
+	//sprint
+	if (Input::isKeyPressed(SDL_SCANCODE_LSHIFT)) isRunning = true;
+	float playerSpeed = (isRunning == true) ? run_speed : walk_speed;
 
 
+	/*
+	if (Input::isKeyPressed(SDL_SCANCODE_SPACE)) {
+		seconds_elapsed *= 0.2f;
+	}*/
+
+	//rotation
+	float rotSpeed = 120.0f * seconds_elapsed;
+	if (Input::isKeyPressed(SDL_SCANCODE_E)) this->yaw += rotSpeed;
+	if (Input::isKeyPressed(SDL_SCANCODE_Q)) this->yaw -= rotSpeed;
+
+	//player movement code
 	Matrix44 playerRotation;
 	playerRotation.rotate(this->yaw * DEG2RAD, Vector3(0, 1, 0));
 
@@ -180,21 +225,28 @@ void sPlayer::playerMovement(std::vector<EntityMesh*> entities,float seconds_ela
 	Vector3 up = playerRotation.rotateVector(Vector3(0, 1, 0));
 
 	Vector3 playerVel;
+	if (multi) {
+		if (Input::isKeyPressed(SDL_SCANCODE_UP)) playerVel = playerVel + (forward * playerSpeed);
+		if (Input::isKeyPressed(SDL_SCANCODE_DOWN)) playerVel = playerVel - (forward * playerSpeed);
+		if (Input::isKeyPressed(SDL_SCANCODE_RIGHT)) playerVel = playerVel + (right * playerSpeed);
+		if (Input::isKeyPressed(SDL_SCANCODE_LEFT)) playerVel = playerVel - (right * playerSpeed);
+	}
+	else {
+		if (Input::isKeyPressed(SDL_SCANCODE_W)) playerVel = playerVel + (forward * playerSpeed);
+		if (Input::isKeyPressed(SDL_SCANCODE_S)) playerVel = playerVel - (forward * playerSpeed);
+		if (Input::isKeyPressed(SDL_SCANCODE_D)) playerVel = playerVel + (right * playerSpeed);
+		if (Input::isKeyPressed(SDL_SCANCODE_A)) playerVel = playerVel - (right * playerSpeed);
+	}
+	
 
-	if (Input::isKeyPressed(SDL_SCANCODE_W)) playerVel = playerVel + (forward * playerSpeed);
-	if (Input::isKeyPressed(SDL_SCANCODE_S)) playerVel = playerVel - (forward * playerSpeed);
-	if (Input::isKeyPressed(SDL_SCANCODE_D)) playerVel = playerVel + (right * playerSpeed);
-	if (Input::isKeyPressed(SDL_SCANCODE_A)) playerVel = playerVel - (right * playerSpeed);
-
-	//player movement code
 	//jump
 	if (Input::wasKeyPressed(SDL_SCANCODE_C) && this->pos.y <= 0.0f) {
 
-		this->jumpLock = 0.3f;
+		this->jumpLock = 0.15f;
 	}
 
 	if (this->jumpLock != 0.0f) {
-		playerVel[1] += 0.15f;
+		playerVel[1] += 0.1f;
 	}
 
 	if (this->pos.y > 0.0f) {
@@ -219,12 +271,12 @@ void sPlayer::playerMovement(std::vector<EntityMesh*> entities,float seconds_ela
 
 	nextPos = this->pos + playerVel;
 
-	nextPos = this->playerCollision(entities, nextPos, seconds_elapsed);
+	nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed);
 
 	this->pos = nextPos;
 }
 
-void sPlayer::npcMovement(sPlayer* player, float seconds_elapsed) {
+void sPlayer::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, sPlayer* player, float seconds_elapsed) {
 
 	Matrix44 npcModel = this->getModel();
 	Vector3 side = npcModel.rotateVector(Vector3(1, 0, 0)).normalize();
@@ -241,7 +293,11 @@ void sPlayer::npcMovement(sPlayer* player, float seconds_elapsed) {
 		this->yaw += 90.0f * sign(sideDot) * seconds_elapsed;
 	}
 
-	if (dist > 4.0f) {
-		this->pos = this->pos + (forward * 2.0f * seconds_elapsed);
+	if (dist > 2.0f) {
+
+		Vector3 nextPos = this->pos + (forward * this->speed * seconds_elapsed);
+		nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed);
+		this->pos = nextPos;
+
 	}
 }

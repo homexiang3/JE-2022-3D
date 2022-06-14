@@ -26,9 +26,8 @@ public:
 	Scene();
 	~Scene();
 	//globals movidos de game (quizas se acaban borrando)
-	bool cameraLocked = true; //util para debug
+	//bool cameraLocked = true; //util para debug
 	Audio* audio = NULL;
-	bool firstPerson = false; //cambiar a true para vista en primera persona
 	//props of our game
 	Prop props[20];
 	//Entity* root;
@@ -45,7 +44,7 @@ public:
 Vector3 ReadVector3(std::stringstream& ss);
 void ImportMap(const char* path, std::vector<EntityMesh*>& entities, EntityMesh*& groundMesh, EntityMesh*& skyMesh);
 void ExportMap(std::vector<EntityMesh*>& entities, EntityMesh* groundMesh, EntityMesh* skyMesh);
-
+void ImportEnemies(const char* path, std::vector<sPlayer*>& enemies);
 //utils
 Vector3 Lerp(Vector3 a, Vector3 b, float t);
 float sign(float value);

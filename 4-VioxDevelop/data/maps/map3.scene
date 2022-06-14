@@ -1,0 +1,7 @@
+data/map1/grass.tga 200
+data/cielo.ASE data/map3/cielo3.tga 0,0,0 0,0,1
+data/map1/building-shop-china.obj data/map1/color-atlas.png -7.55016,0,-10.5189 0,0,1
+data/map1/building-shop-china.obj data/map1/color-atlas.png 2.15891,0,-10.7557 5.96047e-08,0,-1
+data/map1/building-shop-china.obj data/map1/color-atlas.png 11.8281,0,-4.23857 -0.642788,0,0.766044
+data/map1/building-shop-china.obj data/map1/color-atlas.png -13.274,0,-0.0690765 0.766044,0,0.642788
+data/map1/building-shop-china.obj data/map1/color-atlas.png -16.2333,0,21.8929 -0.939693,0,0.34202

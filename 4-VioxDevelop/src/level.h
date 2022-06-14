@@ -30,21 +30,22 @@ public:
 	void Render();
 	void Update(float seconds_elapsed);
 	void removeEntities();
+	void clearEditor();
 	void removeSelected();
 	void addEntityOnFront(const char* mesh, const char* tex);
 	void testCollisionOnFront();
 	void rotateSelected(float angleDegree);
 	Vector3 getRayDir();
 	Vector3 getRayOrigin();
-	void moveSelected(float speed);
 };
 
 class PlayLevel : public Level {
 public:
-	PlayLevel(const char* map);
+	PlayLevel(const char* map, const char* enemiesPath);
 
 	sPlayer* player = NULL;
 	std::vector<sPlayer*> enemies;
+	Camera* cam = NULL;
 
 	void Render();
 	void Update(float seconds_elapsed);
@@ -63,8 +64,9 @@ public:
 	void Render();
 	void Update(float seconds_elapsed);
 	void RenderWorld(Camera* cam);
-	void RenderMinimap();
 
 };
 
 void InitLevels(std::vector<PlayLevel*>& levels, EditorLevel*& editor, MultiLevel*& multi);
+void RenderMinimap(int widthStart, sPlayer*& player, std::vector<sPlayer*>& enemies, EntityMesh* groundMesh, std::vector<EntityMesh*>& entities);
+void SetupCam(Matrix44& playerModel, Camera* cam);

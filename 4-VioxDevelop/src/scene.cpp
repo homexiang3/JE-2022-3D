@@ -103,7 +103,7 @@ void ImportMap(const char* path, std::vector<EntityMesh*>& entities, EntityMesh*
 
 		entities.push_back(entity);
 	}
-	std::cout << " + Success: Level imported" << std::endl;
+	std::cout << " + Success: Level imported from " << path << std::endl;
 }
 void ExportMap(std::vector<EntityMesh*>& entities, EntityMesh* groundMesh, EntityMesh* skyMesh) {
 	std::ofstream myfile;
@@ -182,4 +182,35 @@ void ExportMap(std::vector<EntityMesh*>& entities, EntityMesh* groundMesh, Entit
 	}
 	std::cout << " + Success: Level exported" << std::endl;
 	myfile.close();
+}
+
+void ImportEnemies(const char* path, std::vector<sPlayer*>& enemies) {
+	
+	//prepare file content
+	std::string content = "";
+	readFile(path, content);
+	std::stringstream ss(content);
+
+	//read entities
+	while (!ss.eof()) {
+		//read values
+		std::string meshPath;
+		ss >> meshPath;
+		std::string texPath;
+		ss >> texPath;
+		float speed;
+		ss >> speed;
+		int health;
+		ss >> health;
+		//create entity
+		sPlayer* enemy = new sPlayer();
+		enemy->character_mesh = new EntityMesh(GL_TRIANGLES, meshPath, texPath, "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
+		enemy->speed = speed;
+		enemy->health = health;
+		//definir la pos random?
+
+		enemies.push_back(enemy);
+	}
+	std::cout << " + Success: enemies imported from "<< path << std::endl;
+
 }
