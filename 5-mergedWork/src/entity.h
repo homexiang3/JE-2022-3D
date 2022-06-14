@@ -4,6 +4,8 @@
 #include "mesh.h"
 #include "texture.h"
 #include "shader.h"
+#include "camera.h"
+#include "animation.h"
 
 //clase base de la entidad
 
@@ -22,7 +24,7 @@ public:
 	//bool destroyed = false if we want to ignore actions for destroyed entities on destroyed vectors
 
 	//methods overwritten
-	virtual void render();
+	virtual void render(Camera* camera);
 	virtual void update(float elapsed_time);
 
 	//useful methods
@@ -42,72 +44,65 @@ public:
 
 class EntityMesh : public Entity {
 public:
-	EntityMesh(int primitive, const char* meshPath, const char* texturePath, char* shaderPath, char* shaderPath2, Vector4 color);
+	EntityMesh(int primitive, std::string meshPath, std::string texturePath, char* shaderPath, char* shaderPath2, Vector4 color);
 	//Attributes of this class 
 	int primitive;
-	Mesh* mesh;
-	Texture* texture;
-	Shader* shader; //si acabamos utilizando uno se podria opitimizar mucho quitandolo de aqui y llamarlo solo en el render de game
+	Mesh* mesh = NULL;
+	Texture* texture = NULL;
+	Shader* shader = NULL; //si acabamos utilizando uno se podria opitimizar mucho quitandolo de aqui y llamarlo solo en el render de game
 	Vector4 color;
-	const char* meshPath;
-	const char* texturePath;
+	std::string meshPath;
+	std::string texturePath;
 	float tiling;
 
+	//anims
+	Animation* anim = NULL;
+
 	//methods overwritten 
-	void render();
+	void render( Camera* camera );
 	void update(float dt);
 };
 
 //estructura para el player
 struct sPlayer {
+	sPlayer(const char* meshPath, const char* texPath);
+
+	Vector3 spawnPos;
 	Vector3 pos;
-	Vector3 vel;
+	//Vector3 vel;
+	float playerVel;
 	float yaw = 0.0f;
-	float pitch = 0.0f; //para el first person
-	float radius = 10.0f; //por si queremos hacer bounding con colisions
+	//float pitch = 0.0f; //para el first person
+	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision)
 	int health;
 	EntityMesh* character_mesh;
 	Vector2 dash_direction;
 	float jumpLock;
 
-	Matrix44 getModel() {
-		Matrix44 model;
-		model.translate(pos.x, pos.y, pos.z);
-		model.rotate(yaw * DEG2RAD, Vector3(0, 1, 0));
-		this->character_mesh->model = model;
-		return  model;
-	}
+	//anims
+	std::vector<Animation*> anims;
+	int ctr = 0;
+	float animTimer = 0.0f;
+	int side = -1;
+
+	Animation* idle = NULL;
+	Animation* walk = NULL;
+	Animation* run = NULL;
+
+	Animation* left_puch = NULL;
+	Animation* kick = NULL;
+	Animation* dash = NULL;
+	Animation* jump = NULL;
+
+	Matrix44 getModel();
+	void initAnims();
+	void playerMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, float seconds_elapsed, bool multi);
+	Vector3 playerCollision(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed);
+	void npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities,sPlayer* player, float seconds_elapsed);
+	void ChangeAnim(int i, float time);
+	Animation* renderAnim();
+
 	
-	Vector3 playerCollision(std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed) {
-		//TEST COLLISIONS, HABRIA QUE TENER DINAMICAS - ESTATICAS, DINAMICAS - DINAMICAS, PLAYER - COSAS ETC...
-		//calculamos el centro de la esfera de colisión del player elevandola hasta la cintura
-		Vector3 character_center = nextPos + Vector3(0, 1, 0);
-
-		//para cada objecto de la escena...
-		for (size_t i = 0; i < entities.size(); i++)
-		{
-			EntityMesh* currentEntity = entities[i];
-			//comprobamos si colisiona el objeto con la esfera (radio 3)
-			Vector3 coll;
-			Vector3 collnorm;
-			if (!currentEntity->mesh->testSphereCollision(currentEntity->model, character_center, 0.5f, coll, collnorm))
-				continue; //si no colisiona, pasamos al siguiente objeto
-
-			//si la esfera está colisionando muevela a su posicion anterior alejandola del objeto
-			Vector3 push_away = normalize(coll - character_center) * seconds_elapsed;
-			nextPos = this->pos - push_away; //move to previous pos but a little bit further
-
-			//cuidado con la Y, si nuestro juego es 2D la ponemos a 0
-			nextPos.y = 0;
-
-			//reflejamos el vector velocidad para que de la sensacion de que rebota en la pared
-			//velocity = reflect(velocity, collnorm) * 0.95;
-
-			return nextPos;
-		}
-		
-		return nextPos;
-	}
 };
 
 /*otros ejemplos

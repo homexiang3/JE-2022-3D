@@ -6,6 +6,7 @@
 #include "shader.h"
 #include "input.h"
 #include "animation.h"
+#include "audio.h"
 
 #include <cmath>
 
@@ -50,6 +51,7 @@ Game::Game(int window_width, int window_height, SDL_Window* window)
 
 	//hide the cursor
 	SDL_ShowCursor(!mouse_locked); //hide or show the mouse
+	
 }
 
 //what to do when the image has to be draw
@@ -72,8 +74,14 @@ void Game::render(void)
 	//render current stage
 	GetCurrentStage(scene->currentStage, scene->stages)->Render();
 
+	//reset camera
+	camera->aspect = window_width / window_height;
+	camera->enable();
+	glViewport(0, 0, window_width, window_height); 
+	
+
 	//Draw the floor grid
-	drawGrid();
+	//drawGrid();
 
 	//render the FPS, Draw Calls, etc
 	drawText(2, 2, getGPUStats(), Vector3(1, 1, 1), 2);
@@ -112,7 +120,7 @@ void Game::onKeyDown( SDL_KeyboardEvent event )
 	switch(event.keysym.sym)
 	{
 		case SDLK_ESCAPE: must_exit = true; break; //ESC key, kill the app
-		case SDLK_F1: Shader::ReloadAll(); break; 
+		//case SDLK_F1: Shader::ReloadAll(); break; 
 	}
 }
 
