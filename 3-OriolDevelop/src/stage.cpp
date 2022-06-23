@@ -1,9 +1,6 @@
 #include "stage.h"
 #include "game.h"
 #include "input.h"
-#include <math.h>  //fmod for anims
-#include "texture.h"
-#include "mesh.h"
 
 //STAGE UTIL FUNCTIONS
 
@@ -25,14 +22,140 @@ void InitStages(std::vector<Stage*>& stages) {
 
 //INTRO STAGE
 
+void IntroStage::movePtr() {
+	int window_width = Game::instance->window_width;
+	int window_height = Game::instance->window_height;
+
+	int i = this->menuPointer;
+	float x = window_width / 2;
+	float w1 = window_width / 1.5;
+	float w = 100 * window_width / 800;
+	float h = 75 * window_height / 600;
+
+	float center_x = x -( w1 / 1.7);
+	float center_y = window_height / 3 + i * window_height / 8;
+	
+	
+	this->menuPtr_mesh.vertices.clear();
+	
+	//create six vertices (3 for upperleft triangle and 3 for lowerright)
+
+	this->menuPtr_mesh.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
+	this->menuPtr_mesh.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
+	this->menuPtr_mesh.vertices.push_back(Vector3(center_x + w * 0.5f, center_y - h * 0.5f, 0.0f));
+	this->menuPtr_mesh.vertices.push_back(Vector3(center_x - w * 0.5f, center_y + h * 0.5f, 0.0f));
+	this->menuPtr_mesh.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
+	this->menuPtr_mesh.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
+}
+
+void IntroStage::initQuads()
+{
+
+	this->quadTex = Texture::Get("data/menu/menubu.tga");
+	this->menuPointer_tex = Texture::Get("data/menu/boxingPointer.png");
+	char* texts[5] = { "Tutorial","Single player", "Editor mode", "Multiplayer versus", "Exit" };
+	int window_width = Game::instance->window_width;
+	int window_height = Game::instance->window_height;
+	this->cam2D.setOrthographic(0, window_width, window_height, 0, -1, 1);
+	for (int i = 0; i < 5; i++)
+	{
+		float x = window_width / 2;
+		float y = window_height / 3 + i * window_height / 8;
+		float w = window_width / 1.5;
+		float h = window_height / 12;
+
+		Mesh quad;
+		quad.createQuad(x, y, w, h, true);
+		this->quads.push_back(quad);
+
+		textStruct txt;
+		txt.txt = texts[i];
+		txt.scale = window_width / 400;
+		txt.pos = Vector2(x - strlen(txt.txt) * (3 + txt.scale), y - 10);
+		this->tags.push_back(txt);
+	}
+	float x = window_width / 2 - (window_width / 1.5) / 1.7;
+	float y = window_height / 3;
+	float w = 100 * window_width / 800;
+	float h = 75 * window_height / 600;
+	this->menuPtr_mesh.createQuad(x, y, w, h, true);
+}
+
+void IntroStage::renderQuad(Mesh quad, Texture* tex, Matrix44 anim = Matrix44())
+{
+	Shader* a_shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
+
+
+	if (!a_shader) return;
+	a_shader->enable();
+
+	a_shader->setUniform("u_color", Vector4(1, 1, 1, 1));
+	a_shader->setUniform("u_viewprojection", cam2D.viewprojection_matrix);
+	if (tex != NULL) {
+		a_shader->setUniform("u_texture", tex, 0);
+	}
+	a_shader->setUniform("u_time", time);
+	a_shader->setUniform("u_tex_tiling", 1.0f);
+	a_shader->setUniform("u_model", anim);
+	quad.render(GL_TRIANGLES);
+	a_shader->disable();
+}
+
 void IntroStage::Render() {
 	
-	//TO DO
+	int window_width = Game::instance->window_width;
+	int window_height = Game::instance->window_height;
+
+	if (this->initSize != window_height) { //resize window
+		this->quads.clear();
+		this->tags.clear();
+		this->initSize = window_height;
+		initQuads();
+	}
+
+	Texture* tex = this->quadTex;
+	for (int  i = 0; i < this->quads.size(); i++)
+	{
+		//a_shader->enable();
+		Mesh quad = this->quads[i];
+		renderQuad(quad, tex, Matrix44());
+	}
+	tex = this->menuPointer_tex;
+	Matrix44 gloveModel;
+	gloveModel.translate(sin(Game::instance->time*4) * 6, 0, 0);
+	renderQuad(this->menuPtr_mesh, tex, gloveModel);
+	for (int i = 0; i < this->tags.size(); i++)
+	{
+		textStruct curr = this->tags[i];
+		drawText(curr.pos.x, curr.pos.y, curr.txt, Vector3(1, 1, 1), curr.scale);
+	}
+	
+	
 }
 
 
 void IntroStage::Update(float seconds_elapsed) {
-	//TO DO
+	Scene* scene = Game::instance->scene;
+
+	//std::cout << this->menuPointer << std::endl;
+	if (Input::wasKeyPressed(SDL_SCANCODE_S)) {
+		scene->audio->PlayGameSound(1,2);
+		this->menuPointer = (this->menuPointer +1) % 5;
+		movePtr();
+	}
+
+	if (Input::wasKeyPressed(SDL_SCANCODE_W)) {
+		scene->audio->PlayGameSound(1, 2);
+		this->menuPointer =( this->menuPointer +(this->quads.size() -1 )) % 5;
+		movePtr();
+	}
+
+	if (Input::wasKeyPressed(SDL_SCANCODE_X)) {
+		scene->audio->PlayGameSound(2, 2);
+		if (this->menuPointer == 4) Game::instance->must_exit = true;
+		SetStage((STAGE_ID)(this->menuPointer+1), Game::instance->scene->currentStage );
+		
+	}
 }
 
 //TUTORIAL STAGE
@@ -51,266 +174,51 @@ void TutorialStage::Update(float seconds_elapsed) {
 
 void PlayStage::Render() {
 
-	Camera* camera = Camera::current;
 	Scene* scene = Game::instance->scene;
 
-	Matrix44 playerModel = scene->player.getModel();
-	scene->player.character_mesh->model = playerModel;
+	scene->levels[scene->currentLevel]->Render();
 
-	if (scene->cameraLocked) {
-		//camera following plane
-		Vector3 desiredEye = playerModel * Vector3(0, 3, 3);
-		Vector3 eye = scene->Lerp(camera->eye, desiredEye, 5.f * Game::instance->elapsed_time);
-		Vector3 center = playerModel * Vector3(0.0f, 0.0f, -5.0f);
-		Vector3 up = Vector3(0.0f, 1.0f, 0.0f);
-		if (scene->firstPerson) {
-			//si es first person no renderizar el personaje o solo manos/piernas
-			Matrix44 firstPersonModel = playerModel;
-			firstPersonModel.rotate(scene->player.pitch * DEG2RAD, Vector3(1, 0, 0));
 
-			eye = playerModel * Vector3(0.0f, 1.0f, -0.5f);
-			center = eye + firstPersonModel.rotateVector(Vector3(0.0f, 0.0f, -1.0f));
-			up = firstPersonModel.rotateVector(Vector3(0.0f, 1.0f, 0.0f));
-		}
-		//set the camera 
-		camera->lookAt(eye, center, up);
-	}
-	//rescale model for animation (it was a giant ) 
-	playerModel.scale(scene->player.side * 0.015, 0.015, 0.015);
-	//playerModel.rotate(180 * DEG2RAD, Vector3(0,1,0));
-	scene->player.character_mesh->model = playerModel;
-
-	//animations 
-	float time = getTime() * 0.001;
-	
-	float t = fmod(time, scene->player.idle->duration) / scene->player.run->duration;
-	/*
-	scene->player.walk->assignTime(t * scene->player.walk->duration);
-	scene->player.run->assignTime(t * scene->player.run->duration);
-	scene->player.idle->assignTime(time * scene->player.idle->duration);
-	*/
-	for (int i = 0; i < scene->player.anims.size(); i++) {
-		if (i==3 || i==6 ) scene->player.anims[i]->assignTime(time * 1.8);
-		else scene->player.anims[i]->assignTime(time);
-	}
-	
-	Animation* FinalAnim = scene->player.anims[scene->player.ctr];
-	//blendSkeleton(&scene->player.anims[0]->skeleton, &scene->player.anims[scene->player.ctr]->skeleton, 0.3f, &FinalAnim->skeleton);
-	
-	//float velFactor = scene->player.playerVel
-
-	//Render
-	//scene->skyMesh->model.setTranslation(camera->eye.x, camera->eye.y - 20.0f, camera->eye.z); solo usarlo si el mapa fuera muy grande
-	glDisable(GL_DEPTH_TEST);
-	scene->skyMesh->render(FinalAnim->skeleton, false);//cielo
-	glEnable(GL_DEPTH_TEST);
-
-	scene->groundMesh->render(FinalAnim->skeleton, false); //suelo
-
-	scene->player.character_mesh->render(FinalAnim->skeleton, true);//player
-
-	for (size_t i = 0; i < scene->entities.size(); i++)//entities added
-	{
-		EntityMesh* entity = scene->entities[i];
-		entity->render(FinalAnim->skeleton, false);
-	}
 }
 
 void PlayStage::Update(float seconds_elapsed) {
+
 	Scene* scene = Game::instance->scene;
 
-		//movement code
+	scene->levels[scene->currentLevel]->Update(seconds_elapsed);
 
-		float playerX = scene->player.pos[0];
-		float playerY = scene->player.pos[1];
-		float playerZ = scene->player.pos[2];
-
-		bool isRunning = false;
-		float walk_speed = 10.0f * seconds_elapsed;
-		float run_speed = 30.0f * seconds_elapsed;
-
-		scene->player.jumpLock = max(0.0f, scene->player.jumpLock - seconds_elapsed);
-		scene->player.animTimer = max(0.0f, scene->player.animTimer - seconds_elapsed);
-
-
-		//punch 
-		if (Input::wasKeyPressed(SDL_SCANCODE_Z) && scene->player.animTimer <= 0.2f) {
-			scene->player.side = scene->player.side * -1;
-			ChangeAnim(3 , scene->player.anims[3]->duration / 1.8 - 0.05);
-			scene->PlayGameSound(0);
-		}
-
-		if (Input::wasKeyPressed(SDL_SCANCODE_V) && scene->player.animTimer <= 0.2f) {
-			scene->player.side = scene->player.side * -1;
-			ChangeAnim(4 , scene->player.anims[4]->duration);
-		}
-		
-		if (scene->player.animTimer <= 0.0f) ChangeAnim(0, NULL);
-		//sprint
-		if (Input::isKeyPressed(SDL_SCANCODE_LSHIFT)) isRunning = true;
-			
-		
-		scene->player.playerVel = (isRunning == true) ? run_speed : walk_speed;
-
-
-		//escalar tiempo para que vayan mas lentas las particulas
-		if (Input::isKeyPressed(SDL_SCANCODE_SPACE)) {
-			seconds_elapsed *= 0.2f;
-		}
-
-
-		if (scene->cameraLocked) {
-			//float playerSpeed = 20.0f * elapsed_time;
-			float rotSpeed = 120.0f * seconds_elapsed;
-
-			if (scene->firstPerson) {
-				scene->player.pitch += -Input::mouse_delta.y * 10.0f * seconds_elapsed;
-				scene->player.yaw += -Input::mouse_delta.x * 10.0f * seconds_elapsed;
-				Input::centerMouse();
-				SDL_ShowCursor(false);
-			}
-			else {
-				if (Input::isKeyPressed(SDL_SCANCODE_E)) scene->player.yaw += rotSpeed;
-				if (Input::isKeyPressed(SDL_SCANCODE_Q)) scene->player.yaw -= rotSpeed;
-			}
-
-			Matrix44 playerRotation;
-			playerRotation.rotate(scene->player.yaw * DEG2RAD, Vector3(0, 1, 0));
-
-			Vector3 forward = playerRotation.rotateVector(Vector3(0, 0, -1));
-			Vector3 right = playerRotation.rotateVector(Vector3(1, 0, 0));
-			Vector3 up = playerRotation.rotateVector(Vector3(0, 1, 0));
-
-			Vector3 playerVel;
-
-			if (Input::isKeyPressed(SDL_SCANCODE_W) && scene->player.ctr != 5)
-			{
-				playerVel = playerVel + (forward * scene->player.playerVel);
-				ChangeAnim(1, NULL);
-			}
-			if (Input::isKeyPressed(SDL_SCANCODE_S) && scene->player.ctr != 5) {
-				playerVel = playerVel - (forward * scene->player.playerVel);
-				ChangeAnim(1, NULL);
-			}
-			if (Input::isKeyPressed(SDL_SCANCODE_D)) playerVel = playerVel + (right * scene->player.playerVel);
-			if (Input::isKeyPressed(SDL_SCANCODE_A)) playerVel = playerVel - (right * scene->player.playerVel);
-
-			if (Input::isKeyPressed(SDL_SCANCODE_LSHIFT)) ChangeAnim(2, NULL);// run anim
-
-			//player movement code
-			//jump
-			if (Input::wasKeyPressed(SDL_SCANCODE_C) && playerY <= 0.0f) {
-				scene->player.jumpLock = 0.3f;
-				ChangeAnim(6, 0.8f);
-			}
-
-			if (scene->player.jumpLock != 0.0f) {
-				playerVel[1] += 0.15f;
-			}
-
-			if (playerY > 0.0f) {
-				playerVel[1] -= seconds_elapsed * 3;
-			}
-
-			Vector3 nextPos = scene->player.pos + playerVel;
-
-			//dash
-			Vector2 dash_dir = Vector2(playerX - nextPos[0], playerZ - nextPos[2]).normalize();
-			if (dash_dir.x != 0 || dash_dir.y != 0)scene->player.dash_direction = dash_dir;
-
-			//std::cout << scene->player.dash_direction.x << "  " << scene->player.dash_direction.y << std::endl;
-
-			Vector3 playerVec = scene->player.character_mesh->model.frontVector().normalize();
-			float sumX = 20.0 * scene->player.dash_direction.x;
-			float sumZ = 20.0 * scene->player.dash_direction.y;
-			if (scene->player.ctr == 5) {
-				playerVel[0] -= sumX;
-				playerVel[2] -= sumZ;
-			}
-			if (Input::wasKeyPressed(SDL_SCANCODE_X)) {
-				playerVel[0] -= sumX;
-				playerVel[2] -= sumZ;
-				ChangeAnim(5, 0.25f);
-			}
-
-			nextPos = scene->player.pos + playerVel;
-
-		nextPos = scene->player.playerCollision(scene->entities, nextPos, seconds_elapsed);
-
-		scene->player.pos = nextPos;
-		}
 	
-}
-
-void ChangeAnim(int i , float time) {
-	Scene* scene = Game::instance->scene;
-	if(scene->player.animTimer <=0.0f) scene->player.ctr = i;
-	if(time != NULL) scene->player.animTimer =time;
 }
 
 //EDITOR STAGE
 void EditorStage::Render() {
 
+
 	Scene* scene = Game::instance->scene;
 
-	glDisable(GL_DEPTH_TEST);
-	//scene->skyMesh->render();//cielo
-	glEnable(GL_DEPTH_TEST);
+	scene->editor->Render();
 
-	//scene->groundMesh->render(); //suelo
-
-	for (size_t i = 0; i < scene->entities.size(); i++)//entities added
-	{
-		EntityMesh* entity = scene->entities[i];
-		///entity->render();
-	}
 }
 
 void EditorStage::Update(float seconds_elapsed) {
-	
-	float mouse_speed = 100.0f;
-	float speed = seconds_elapsed * mouse_speed; //the speed is defined by the seconds_elapsed so it goes constant
 
 	Scene* scene = Game::instance->scene;
-	Camera* camera = Game::instance->camera;
 
-	if (Input::wasKeyPressed(SDL_SCANCODE_TAB)) {
-		scene->cameraLocked = !scene->cameraLocked;
-	}
-	
-	if (Input::wasKeyPressed(SDL_SCANCODE_F2)) {
-		scene->ExportMap(scene->entities);
-	}
-
-	if (Input::wasKeyPressed(SDL_SCANCODE_F3)) {
-		scene->ImportMap("data/maps/map1.scene",scene->entities);
-	}
-
-	if (Input::wasKeyPressed(SDL_SCANCODE_1)) scene->addEntityOnFront();  //debug to add sphere on front
-	if (Input::wasKeyPressed(SDL_SCANCODE_2)) scene->testCollisionOnFront(); //debug to see collision point on front (col in console)
-	if (Input::wasKeyPressed(SDL_SCANCODE_3)) scene->rotateSelected(10.0f);  //rotate selected item with 3
-	if (Input::wasKeyPressed(SDL_SCANCODE_4)) scene->rotateSelected(-10.0f);
-
-	//movement
-	if (Input::isKeyPressed(SDL_SCANCODE_LSHIFT)) speed *= 10; //move faster with left shift
-	if (Input::isKeyPressed(SDL_SCANCODE_W) || Input::isKeyPressed(SDL_SCANCODE_UP)) camera->move(Vector3(0.0f, 0.0f, 1.0f) * speed);
-	if (Input::isKeyPressed(SDL_SCANCODE_S) || Input::isKeyPressed(SDL_SCANCODE_DOWN)) camera->move(Vector3(0.0f, 0.0f, -1.0f) * speed);
-	if (Input::isKeyPressed(SDL_SCANCODE_A) || Input::isKeyPressed(SDL_SCANCODE_LEFT)) camera->move(Vector3(1.0f, 0.0f, 0.0f) * speed);
-	if (Input::isKeyPressed(SDL_SCANCODE_D) || Input::isKeyPressed(SDL_SCANCODE_RIGHT)) camera->move(Vector3(-1.0f, 0.0f, 0.0f) * speed);
-	if (Input::isKeyPressed(SDL_SCANCODE_E)) camera->move(Vector3(0.0f, -1.0f, 0.0f) * speed);
-	if (Input::isKeyPressed(SDL_SCANCODE_Q)) camera->move(Vector3(0.0f, 1.0f, 0.0f) * speed);
-
+	scene->editor->Update(seconds_elapsed);
 
 }
 
 //MULTI STAGE
 void MultiStage::Render() {
-	//TO DO
 
+	Scene* scene = Game::instance->scene;
+	scene->multi->Render();
 }
 
 void MultiStage::Update(float seconds_elapsed) {
-	//TO DO
+
+	Scene* scene = Game::instance->scene;
+	scene->multi->Update(seconds_elapsed);
 }
 
 //END STAGE

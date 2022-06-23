@@ -1,0 +1,3 @@
+data/goblin.obj data/minichar_tex.png 4 1
+data/goblin.obj data/minichar_tex.png 4 1
+data/goblin.obj data/minichar_tex.png 4 1
