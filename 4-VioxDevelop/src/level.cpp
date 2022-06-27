@@ -3,7 +3,7 @@
 #include "input.h"
 //UTILS
 
-void InitLevels(std::vector<PlayLevel*>& levels, EditorLevel*& editor, MultiLevel*& multi) {
+void InitLevels(std::vector<PlayLevel*>& levels, EditorLevel*& editor, MultiLevel*& multi, StaticLevel*& intro, StaticLevel*& end) {
 	//we defined just 3 levels
 	levels.reserve(3);
 	levels.push_back(new PlayLevel("data/maps/map1.scene", "data/map1/enemies.txt"));
@@ -11,6 +11,9 @@ void InitLevels(std::vector<PlayLevel*>& levels, EditorLevel*& editor, MultiLeve
 	levels.push_back(new PlayLevel("data/maps/map3.scene", "data/map3/enemies.txt"));
 	editor = new EditorLevel();
 	multi = new MultiLevel();
+	intro = new StaticLevel("data/maps/map1.scene");
+	end = new StaticLevel("data/maps/map3.scene");
+
 
 }
 
@@ -35,7 +38,7 @@ void RenderMinimap(int widthStart, sPlayer*& player, std::vector<sPlayer*>& enem
 	groundMesh->render(&cam);
 
 	//Use flat.fs since no texture is provided
-	
+
 	//we as a green point
 	EntityMesh* playerPoint = new EntityMesh(GL_TRIANGLES, "data/sphere.obj", "", "data/shaders/basic.vs", "data/shaders/flat.fs", Vector4(0, 1, 0, 1));
 	playerPoint->model = playerModel;
@@ -68,19 +71,75 @@ void RenderMinimap(int widthStart, sPlayer*& player, std::vector<sPlayer*>& enem
 	glViewport(0, 0, window_width, window_height);
 }
 
-void SetupCam(Matrix44& playerModel, Camera* cam)
- {
 
+void SetupCam(Matrix44& playerModel, Camera* cam, Vector3 eyePos, Vector3 centerPos, Vector3 upPos)
+{
 	//if (scene->cameraLocked) {
 	//camera following plane
-	Vector3 desiredEye = playerModel * Vector3(0, 3, 3);
+	Vector3 desiredEye = playerModel * eyePos;
 	Vector3 eye = Lerp(cam->eye, desiredEye, 5.f * Game::instance->elapsed_time);
-	Vector3 center = playerModel * Vector3(0.0f, 0.0f, -5.0f);
-	Vector3 up = Vector3(0.0f, 1.0f, 0.0f);
+	Vector3 center = playerModel * centerPos;
+	Vector3 up = upPos;
 
 	//set the camera 
 	cam->lookAt(eye, center, up);
 	//}
+}
+
+
+//STATIC (MENU / ENDSCREEN)
+
+StaticLevel::StaticLevel(const char* map) {
+	//player
+	this->player = new sPlayer("data/skelly.mesh", "data/minichar_tex.png");
+	//import map
+	ImportMap(map, this->entities, this->groundMesh, this->skyMesh);
+
+	//camera
+	int window_width = Game::instance->window_width;
+	int window_height = Game::instance->window_height;
+
+	this->cam = new Camera();
+	this->cam->lookAt(Vector3(0.f, 100.f, 100.f), Vector3(0.f, 0.f, 0.f), Vector3(0.f, 1.f, 0.f)); //position the camera and point to 0,0,0
+	this->cam->setPerspective(70.f, window_width / (float)window_height, 0.1f, 10000.f); //set the projection, we want to be perspective
+}
+
+void StaticLevel::Render() {
+
+	Matrix44 playerModel = this->player->getModel();
+	SetupCam(playerModel, this->cam, Vector3(0, 3, 5), Vector3(5.0f, 0.0f, -5.0f), Vector3(0.0f, 1.0f, 0.0f));
+	this->player->character_mesh->anim = this->player->renderAnim();
+	
+	this->cam->enable();
+	//Render
+	//scene->skyMesh->model.setTranslation(camera->eye.x, camera->eye.y - 20.0f, camera->eye.z); solo usarlo si el mapa fuera muy grande
+	glDisable(GL_DEPTH_TEST);
+	this->skyMesh->render(this->cam);//cielo
+	glEnable(GL_DEPTH_TEST);
+
+	this->groundMesh->render(this->cam); //suelo
+
+	this->player->character_mesh->render(this->cam);//player
+
+
+	for (size_t i = 0; i < this->entities.size(); i++)//entities added
+	{
+		EntityMesh* entity = this->entities[i];
+		entity->render(this->cam);
+	}
+
+	int window_width = Game::instance->window_width;
+	int window_height = Game::instance->window_height;
+
+	drawText(window_width - window_width * 0.3 , window_height - window_height * 0.4, "PLAY", Vector3(1, 1, 1), 4);
+	drawText(window_width - window_width * 0.3, window_height - window_height * 0.3, "TUTORIAL", Vector3(1, 1, 1), 4);
+	drawText(window_width - window_width * 0.3, window_height - window_height * 0.2, "MULTI", Vector3(1, 1, 1), 4);
+
+	
+
+}
+void StaticLevel::Update(float seconds_elapsed) {
+
 }
 
 //EDITOR
@@ -157,14 +216,14 @@ void EditorLevel::Update(float seconds_elapsed) {
 	//cargar diferentes suelos
 	if (this->currentOption == GROUND) {
 		if (Input::wasKeyPressed(SDL_SCANCODE_1)) {
-			EntityMesh* ground = new EntityMesh(GL_TRIANGLES, "", "data/map1/grass.tga", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
+			EntityMesh* ground = new EntityMesh(GL_TRIANGLES, "", "data/map1/suelo.tga", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
 			ground->tiling = 200.0f;
 			ground->mesh = new Mesh();
 			ground->mesh->createPlane(1000); 
 			this->groundMesh = ground;
 		}
 		if (Input::wasKeyPressed(SDL_SCANCODE_2)) {
-			EntityMesh* ground = new EntityMesh(GL_TRIANGLES, "", "data/map2/grass2.png", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
+			EntityMesh* ground = new EntityMesh(GL_TRIANGLES, "", "data/map2/suelo2.png", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
 			ground->tiling = 200.0f;
 			ground->mesh = new Mesh();
 			ground->mesh->createPlane(1000); 
@@ -285,9 +344,8 @@ void EditorLevel::removeEntities() {
 		this->entities.pop_back();
 	}
 }
-
-void EditorLevel::clearEditor() {
-
+void EditorLevel::clearEditor()
+{
 	this->removeEntities();
 	this->skyMesh = NULL;
 	this->groundMesh = NULL;
@@ -320,12 +378,12 @@ MultiLevel::MultiLevel() {
 
 
 	//players
-	this->player1 = new sPlayer();
-	this->player1->character_mesh = new EntityMesh(GL_TRIANGLES, "data/skelleton.obj", "data/minichar_tex.png", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
-
-	this->player2 = new sPlayer();
-	this->player2->character_mesh = new EntityMesh(GL_TRIANGLES, "data/skelleton.obj", "data/minichar_tex.png", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
-
+	this->player1 = new sPlayer("data/skelly.mesh", "data/minichar_tex.png");
+	this->player1->pos = Vector3(0, 0, -20); //se podria pasar por constructor
+	this->player1->yaw = 180;
+	this->player2 = new sPlayer("data/skelly.mesh", "data/minichar_tex.png");
+	this->player2->pos = Vector3(0, 0, 20);
+	
 	//cams
 	int window_width = Game::instance->window_width;
 	int window_height = Game::instance->window_height;
@@ -353,7 +411,7 @@ void MultiLevel::Render() {
 	cam1->aspect = half_width / window_height;
 
 	Matrix44 player1Model = this->player1->getModel();
-	SetupCam(player1Model, this->cam1);
+	SetupCam(player1Model, this->cam1, Vector3(0, 3, 5), Vector3(0.0f, 0.0f, -5.0f), Vector3(0.0f, 1.0f, 0.0f));
 	
 
 	cam1->enable();
@@ -364,7 +422,8 @@ void MultiLevel::Render() {
 	cam2->aspect = half_width / window_height;
 
 	Matrix44 player2Model = this->player2->getModel();
-	SetupCam(player2Model, this->cam2);
+	SetupCam(player2Model, this->cam2, Vector3(0, 3, 5), Vector3(0.0f, 0.0f, -5.0f), Vector3(0.0f, 1.0f, 0.0f));
+	
 	
 	cam2->enable();
 	RenderWorld(cam2);
@@ -391,6 +450,10 @@ void MultiLevel::Update(float seconds_elapsed) {
 }
 
 void MultiLevel::RenderWorld(Camera* cam) {
+	//gigantismo
+	this->player1->character_mesh->anim = this->player1->renderAnim();
+	this->player2->character_mesh->anim = this->player2->renderAnim();
+
 	//this->skyMesh->model.setTranslation(cam->eye.x, cam->eye.y - 20.0f, cam->eye.z);
 	glDisable(GL_DEPTH_TEST);
 	this->skyMesh->render(cam);//cielo
@@ -414,8 +477,8 @@ void MultiLevel::RenderWorld(Camera* cam) {
 PlayLevel::PlayLevel(const char* map, const char* enemiesPath) {
 
 	//player
-	this->player = new sPlayer();
-	this->player->character_mesh = new EntityMesh(GL_TRIANGLES, "data/skelleton.obj", "data/minichar_tex.png", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
+	this->player = new sPlayer("data/skelly.mesh", "data/minichar_tex.png");
+	
 	//get objects
 	ImportMap(map, this->entities, this->groundMesh, this->skyMesh);
 	ImportEnemies(enemiesPath, this->enemies);
@@ -442,7 +505,14 @@ void PlayLevel::Render() {
 	int window_width = Game::instance->window_width;
 
 	Matrix44 playerModel = this->player->getModel();
-	SetupCam(playerModel, this->cam);
+	SetupCam(playerModel, this->cam, Vector3(0, 3, 5), Vector3(0.0f, 0.0f, -5.0f), Vector3(0.0f, 1.0f, 0.0f));
+
+	
+	this->player->character_mesh->anim = this->player->renderAnim(); //cojo la anim directamente desde la mesh para no tener que ir pasandola
+
+	//blendSkeleton(&scene->player.anims[0]->skeleton, &scene->player.anims[scene->player.ctr]->skeleton, 0.3f, &FinalAnim->skeleton);
+
+	//float velFactor = scene->player.playerVel
 
 	this->cam->enable();
 	//Render
@@ -464,6 +534,12 @@ void PlayLevel::Render() {
 	for (size_t i = 0; i < this->enemies.size(); i++)//enemies
 	{
 		sPlayer* enemy = this->enemies[i];
+		//rescale (con anim se vuelve gigante)
+		Matrix44 enemyModel = enemy->getModel();
+		enemyModel.scale(enemy->side * 0.015, 0.015, 0.015);
+		playerModel.rotate(180 * DEG2RAD, Vector3(0,1,0));
+		enemies[i]->character_mesh->model = enemyModel; //si se carga algo diferente al skelly va mal
+
 		enemy->character_mesh->render(this->cam);
 	}
 

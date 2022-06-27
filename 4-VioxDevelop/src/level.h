@@ -20,6 +20,16 @@ public:
 	virtual void Update(float seconds_elapsed) = 0;
 };
 
+class StaticLevel : public Level {
+public:
+	StaticLevel(const char* map);
+	sPlayer* player = NULL;
+	Camera* cam = NULL;
+
+	void Render();
+	void Update(float seconds_elapsed);
+};
+
 class EditorLevel : public Level{
 public:
 	EditorLevel();
@@ -67,6 +77,6 @@ public:
 
 };
 
-void InitLevels(std::vector<PlayLevel*>& levels, EditorLevel*& editor, MultiLevel*& multi);
+void InitLevels(std::vector<PlayLevel*>& levels, EditorLevel*& editor, MultiLevel*& multi, StaticLevel*& intro, StaticLevel*& end);
 void RenderMinimap(int widthStart, sPlayer*& player, std::vector<sPlayer*>& enemies, EntityMesh* groundMesh, std::vector<EntityMesh*>& entities);
-void SetupCam(Matrix44& playerModel, Camera* cam);
+void SetupCam(Matrix44& playerModel, Camera* cam, Vector3 eyePos, Vector3 centerPos, Vector3 upPos);

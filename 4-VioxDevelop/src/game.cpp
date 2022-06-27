@@ -51,13 +51,7 @@ Game::Game(int window_width, int window_height, SDL_Window* window)
 
 	//hide the cursor
 	SDL_ShowCursor(!mouse_locked); //hide or show the mouse
-
-	if (BASS_Init(-1, 44100, 0, 0, NULL) == false) //-1 significa usar el por defecto del sistema operativo
-	{
-		std::cout << "ERROR initializing audio" << std::endl;
-	}
-
-	//scene->audio->playGameSound("data/sounds/test.mp3"); 
+	
 }
 
 //what to do when the image has to be draw
@@ -106,7 +100,7 @@ void Game::update(double seconds_elapsed)
 	{
 		int nextStageIndex = (((int)scene->currentStage) + 1) % scene->stages.size();
 		SetStage((STAGE_ID)nextStageIndex, scene->currentStage);
-
+		std::cout << " + Going to stage " << nextStageIndex << std::endl;
 	} 
 
 	//mouse input to rotate the cam

@@ -6,16 +6,30 @@
 #include <iostream>
 #include "level.h"
 
+struct optionBoxes {
+	//para tener las diferentes option boxes
+	const char* text;
+	int width;
+	int height;
+	EntityMesh* trigger;
+};
+
 Scene::Scene()
 {
+	//alguna funcion para cargar desde fichero el anterior estado de la scene?
 	//init stages
 	InitStages(stages);
 
 	//init levels
-	InitLevels(levels, editor, multi);
+	InitLevels(levels, editor, multi, intro, end);
 	
 	//charge audio
 	this->audio = new Audio();
+
+	if (BASS_Init(-1, 44100, 0, 0, NULL) == false) { //-1 significa usar el por defecto del sistema operativo
+		std::cout << "ERROR initializing audio" << std::endl;
+	}
+	audio->LoadSample("data/music/sfx_enter.wav");
 		
 }
 
@@ -203,9 +217,8 @@ void ImportEnemies(const char* path, std::vector<sPlayer*>& enemies) {
 		int health;
 		ss >> health;
 		//create entity
-		sPlayer* enemy = new sPlayer();
-		enemy->character_mesh = new EntityMesh(GL_TRIANGLES, meshPath, texPath, "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
-		enemy->speed = speed;
+		sPlayer* enemy = new sPlayer(meshPath.c_str(), texPath.c_str());
+		enemy->playerVel = speed;
 		enemy->health = health;
 		//definir la pos random?
 

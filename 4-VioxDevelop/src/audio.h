@@ -2,12 +2,13 @@
 #include <bass.h>
 #include <map>
 #include <string>
+#include <vector>
 
 
 class Audio
 {
 public:
-	static std::map<std::string, Audio*> sLoadedAudios; //para nuestro manager
+	std::vector<HSAMPLE> samples; //para nuestro manager
 	HSAMPLE sample; //aqui guardamos el handler del sample que retorna BASS_SampleLoad
 
 	Audio(); //importante poner sample a cero aqui
@@ -20,8 +21,8 @@ public:
 	static HCHANNEL* Play(const char* filename); //version estática para ir mas rapido
 	*/
 	//initial function se usa de prueba
-	HSAMPLE loadSample(const char* filename);
-	void playGameSound(const char* filename);
+	void PlayGameSound(int pos);
+	void LoadSample(const char* fileName);
 	
 
 };

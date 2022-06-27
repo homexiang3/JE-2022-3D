@@ -32,7 +32,7 @@ EntityMesh::EntityMesh(int primitive, std::string meshPath, std::string textureP
 
 void Entity::render(Camera* cam) {
 	//if it was entity mesh, Matrix44 model = getGlobalMatrix(), render code...
-	Camera* camera = Camera::current;
+	//Camera* camera = Camera::current;
 	Matrix44 model = this->model;
 
 
@@ -112,10 +112,14 @@ void EntityMesh::render(Camera* camera) {
 		a_shader->setUniform("u_model", model);
 		
 		//render the mesh using the shader
-		a_mesh->render(primitive);
+		//a_mesh->render(primitive);
 
 		//disable the shader after finishing rendering
 		mesh->disableBuffers(a_shader);
+		//anims
+		if (!this->anim == NULL) a_mesh->renderAnimated(GL_TRIANGLES, &this->anim->skeleton);//los players la tendran no null
+		else a_mesh->render(primitive);
+
 		a_shader->disable();
 
 		//debug to see bounding box 
@@ -128,6 +132,12 @@ void EntityMesh::update(float dt) {
 };
 
 //sPlayer functions 
+sPlayer::sPlayer(const char* meshPath, const char* texPath) {
+	initAnims();
+	this->character_mesh = new EntityMesh(GL_TRIANGLES, meshPath, texPath, "data/shaders/skinning.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
+	this->character_mesh->anim = this->anims[0];
+
+}
 
 Matrix44 sPlayer::getModel() {
 	Matrix44 model;
@@ -136,7 +146,26 @@ Matrix44 sPlayer::getModel() {
 	this->character_mesh->model = model;
 	return  model;
 }
+void sPlayer::initAnims() {
 
+	this->idle = Animation::Get("data/anims/idle.skanim");
+	this->walk = Animation::Get("data/anims/walk.skanim");
+	this->run = Animation::Get("data/anims/run.skanim");
+
+	this->left_puch = Animation::Get("data/anims/left_punch.skanim");
+	this->kick = Animation::Get("data/anims/kick.skanim");
+	this->dash = Animation::Get("data/anims/dash.skanim");
+	this->jump = Animation::Get("data/anims/jump.skanim");
+
+	this->anims.reserve(7);
+	this->anims.push_back(this->idle);
+	this->anims.push_back(this->walk);
+	this->anims.push_back(this->run);
+	this->anims.push_back(this->left_puch);
+	this->anims.push_back(this->kick);
+	this->anims.push_back(this->dash);
+	this->anims.push_back(this->jump);
+}
 Vector3 sPlayer::playerCollision(std::vector<sPlayer*> enemies,  std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed) {
 	//TEST COLLISIONS, HABRIA QUE TENER DINAMICAS - ESTATICAS, DINAMICAS - DINAMICAS, PLAYER - COSAS ETC...
 	//calculamos el centro de la esfera de colisión del player elevandola hasta la cintura
@@ -195,15 +224,59 @@ Vector3 sPlayer::playerCollision(std::vector<sPlayer*> enemies,  std::vector<Ent
 
 void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMesh*> entities,float seconds_elapsed, bool multi) {
 
+
+
+	Scene* scene = Game::instance->scene;
+
 	bool isRunning = false;
 	float walk_speed = 10.0f * seconds_elapsed;
 	float run_speed = 20.0f * seconds_elapsed;
 
 	this->jumpLock = max(0.0f, this->jumpLock - seconds_elapsed);
+	this->animTimer = max(0.0f, this->animTimer - seconds_elapsed);
+
+	//definir teclas para multi o solo
+
+	int upKey = SDL_SCANCODE_W;
+	int downKey = SDL_SCANCODE_S;
+	int rightRotKey = SDL_SCANCODE_D;
+	int leftRotKey = SDL_SCANCODE_A;
+	int punchKey = SDL_SCANCODE_Z;
+	int kickKey = SDL_SCANCODE_V;
+	int runKey = SDL_SCANCODE_LSHIFT;
+	int jumpKey = SDL_SCANCODE_C;
+	int dashKey = SDL_SCANCODE_X;
+
+	if (multi) {
+		upKey = SDL_SCANCODE_UP;
+		downKey = SDL_SCANCODE_DOWN;
+		rightRotKey = SDL_SCANCODE_RIGHT;
+		leftRotKey = SDL_SCANCODE_LEFT;
+		punchKey = SDL_SCANCODE_M;
+		kickKey = SDL_SCANCODE_N;
+		runKey = SDL_SCANCODE_RSHIFT;
+		jumpKey = SDL_SCANCODE_L;
+		dashKey = SDL_SCANCODE_K;
+	}
+	
+
+	//punch 
+	if (Input::wasKeyPressed(punchKey) && this->animTimer <= 0.2f) {
+		this->side = this->side * -1;
+		ChangeAnim(3, this->anims[3]->duration / 1.8 - 0.05);
+		scene->audio->PlayGameSound(0);
+	}
+	//kick
+	if (Input::wasKeyPressed(kickKey) && this->animTimer <= 0.2f) {
+		this->side = this->side * -1;
+		ChangeAnim(4, this->anims[4]->duration);
+	}
+
+	if (this->animTimer <= 0.0f) ChangeAnim(0, NULL);
 
 	//sprint
-	if (Input::isKeyPressed(SDL_SCANCODE_LSHIFT)) isRunning = true;
-	float playerSpeed = (isRunning == true) ? run_speed : walk_speed;
+	if (Input::isKeyPressed(runKey)) isRunning = true;
+	this->playerVel = (isRunning == true) ? run_speed : walk_speed;
 
 
 	/*
@@ -213,8 +286,6 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 
 	//rotation
 	float rotSpeed = 120.0f * seconds_elapsed;
-	if (Input::isKeyPressed(SDL_SCANCODE_E)) this->yaw += rotSpeed;
-	if (Input::isKeyPressed(SDL_SCANCODE_Q)) this->yaw -= rotSpeed;
 
 	//player movement code
 	Matrix44 playerRotation;
@@ -225,24 +296,28 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	Vector3 up = playerRotation.rotateVector(Vector3(0, 1, 0));
 
 	Vector3 playerVel;
-	if (multi) {
-		if (Input::isKeyPressed(SDL_SCANCODE_UP)) playerVel = playerVel + (forward * playerSpeed);
-		if (Input::isKeyPressed(SDL_SCANCODE_DOWN)) playerVel = playerVel - (forward * playerSpeed);
-		if (Input::isKeyPressed(SDL_SCANCODE_RIGHT)) playerVel = playerVel + (right * playerSpeed);
-		if (Input::isKeyPressed(SDL_SCANCODE_LEFT)) playerVel = playerVel - (right * playerSpeed);
+
+
+	if (Input::isKeyPressed(upKey) && this->ctr != 5)
+	{
+		playerVel = playerVel + (forward * this->playerVel);
+		ChangeAnim(1, NULL);
 	}
-	else {
-		if (Input::isKeyPressed(SDL_SCANCODE_W)) playerVel = playerVel + (forward * playerSpeed);
-		if (Input::isKeyPressed(SDL_SCANCODE_S)) playerVel = playerVel - (forward * playerSpeed);
-		if (Input::isKeyPressed(SDL_SCANCODE_D)) playerVel = playerVel + (right * playerSpeed);
-		if (Input::isKeyPressed(SDL_SCANCODE_A)) playerVel = playerVel - (right * playerSpeed);
+	if (Input::isKeyPressed(downKey) && this->ctr != 5)
+	{
+		playerVel = playerVel - (forward * this->playerVel);
+		ChangeAnim(1, NULL);
 	}
+	if (Input::isKeyPressed(rightRotKey)) this->yaw += rotSpeed;
+	if (Input::isKeyPressed(leftRotKey)) this->yaw -= rotSpeed;
 	
+	
+	if (Input::isKeyPressed(runKey)) ChangeAnim(2, NULL);// run anim
 
 	//jump
-	if (Input::wasKeyPressed(SDL_SCANCODE_C) && this->pos.y <= 0.0f) {
-
+	if (Input::wasKeyPressed(jumpKey) && this->pos.y <= 0.0f) {
 		this->jumpLock = 0.15f;
+		ChangeAnim(6, 0.8f);
 	}
 
 	if (this->jumpLock != 0.0f) {
@@ -262,11 +337,16 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	//std::cout << scene->player.dash_direction.x << "  " << scene->player.dash_direction.y << std::endl;
 
 	Vector3 playerVec = this->character_mesh->model.frontVector().normalize();
-	float sumX = 200.0 * this->dash_direction.x;
-	float sumZ = 200.0 * this->dash_direction.y;
-	if (Input::wasKeyPressed(SDL_SCANCODE_X)) {
+	float sumX = 20.0 * this->dash_direction.x;
+	float sumZ = 20.0 * this->dash_direction.y;
+	if (this->ctr == 5) {
 		playerVel[0] -= sumX;
 		playerVel[2] -= sumZ;
+	}
+	if (Input::wasKeyPressed(dashKey)) {
+		playerVel[0] -= sumX;
+		playerVel[2] -= sumZ;
+		ChangeAnim(5, 0.25f);
 	}
 
 	nextPos = this->pos + playerVel;
@@ -295,9 +375,41 @@ void sPlayer::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*
 
 	if (dist > 2.0f) {
 
-		Vector3 nextPos = this->pos + (forward * this->speed * seconds_elapsed);
+		Vector3 nextPos = this->pos + (forward * this->playerVel * seconds_elapsed);
 		nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed);
 		this->pos = nextPos;
 
 	}
+}
+void sPlayer::ChangeAnim( int i, float time)
+{
+	if (this->animTimer <= 0.0f) this->ctr = i;
+	if (time != NULL) this->animTimer = time;
+}
+
+Animation* sPlayer::renderAnim() {
+	
+	Matrix44 playerModel = this->getModel();
+
+	playerModel.scale(this->side * 0.015, 0.015, 0.015);
+	playerModel.rotate(180 * DEG2RAD, Vector3(0, 1, 0));
+	this->character_mesh->model = playerModel;
+
+	//animations 
+	float time = getTime() * 0.001;
+	float t = fmod(time, this->idle->duration) / this->run->duration;
+	/*
+	scene->player.walk->assignTime(t * scene->player.walk->duration);
+	scene->player.run->assignTime(t * scene->player.run->duration);
+	scene->player.idle->assignTime(time * scene->player.idle->duration);
+	*/
+	for (int i = 0; i < this->anims.size(); i++) {
+		this->anims[i]->assignTime(time);
+		if (i == 3 || i == 6) this->anims[i]->assignTime(time * 1.8);
+		else this->anims[i]->assignTime(time);
+	}
+
+
+	Animation* FinalAnim = this->anims[this->ctr];
+	return FinalAnim;
 }

@@ -5,6 +5,7 @@
 #include "texture.h"
 #include "shader.h"
 #include "camera.h"
+#include "animation.h"
 
 //clase base de la entidad
 
@@ -54,17 +55,22 @@ public:
 	std::string texturePath;
 	float tiling;
 
+	//anims
+	Animation* anim = NULL;
+
 	//methods overwritten 
-	void render(Camera* camera);
+	void render( Camera* camera );
 	void update(float dt);
 };
 
 //estructura para el player
 struct sPlayer {
+	sPlayer(const char* meshPath, const char* texPath);
+
 	Vector3 spawnPos;
 	Vector3 pos;
 	//Vector3 vel;
-	float speed;
+	float playerVel;
 	float yaw = 0.0f;
 	//float pitch = 0.0f; //para el first person
 	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision)
@@ -73,10 +79,29 @@ struct sPlayer {
 	Vector2 dash_direction;
 	float jumpLock;
 
+	//anims
+	std::vector<Animation*> anims;
+	int ctr = 0;
+	float animTimer = 0.0f;
+	int side = -1;
+
+	Animation* idle = NULL;
+	Animation* walk = NULL;
+	Animation* run = NULL;
+
+	Animation* left_puch = NULL;
+	Animation* kick = NULL;
+	Animation* dash = NULL;
+	Animation* jump = NULL;
+
 	Matrix44 getModel();
+	void initAnims();
 	void playerMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, float seconds_elapsed, bool multi);
 	Vector3 playerCollision(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed);
 	void npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities,sPlayer* player, float seconds_elapsed);
+	void ChangeAnim(int i, float time);
+	Animation* renderAnim();
+
 	
 };
 

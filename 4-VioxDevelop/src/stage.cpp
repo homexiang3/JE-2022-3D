@@ -24,12 +24,16 @@ void InitStages(std::vector<Stage*>& stages) {
 
 void IntroStage::Render() {
 	
-	//TO DO
+	Scene* scene = Game::instance->scene;
+
+	scene->intro->Render();
 }
 
 
 void IntroStage::Update(float seconds_elapsed) {
-	//TO DO
+	Scene* scene = Game::instance->scene;
+
+	scene->intro->Update(seconds_elapsed);
 }
 
 //TUTORIAL STAGE
@@ -98,9 +102,13 @@ void MultiStage::Update(float seconds_elapsed) {
 //END STAGE
 
 void EndStage::Render() {
-	//TO DO
+	Scene* scene = Game::instance->scene;
+
+	scene->end->Render();
 }
 
 void EndStage::Update(float seconds_elapsed) {
-	//TO DO
+	Scene* scene = Game::instance->scene;
+
+	scene->end->Update(seconds_elapsed);
 }

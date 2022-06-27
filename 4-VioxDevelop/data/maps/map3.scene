@@ -1,4 +1,4 @@
-data/map1/grass.tga 200
+data/map3/suelo3.png 200
 data/cielo.ASE data/map3/cielo3.tga 0,0,0 0,0,1
 data/map1/building-shop-china.obj data/map1/color-atlas.png -7.55016,0,-10.5189 0,0,1
 data/map1/building-shop-china.obj data/map1/color-atlas.png 2.15891,0,-10.7557 5.96047e-08,0,-1

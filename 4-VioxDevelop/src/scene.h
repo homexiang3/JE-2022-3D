@@ -34,9 +34,11 @@ public:
 	STAGE_ID currentStage = STAGE_ID::PLAY;
 	int currentLevel = 0;
 	std::vector<Stage*> stages;
+	StaticLevel* intro = NULL;
+	StaticLevel* end = NULL;
 	std::vector<PlayLevel*> levels;
-	EditorLevel* editor;
-	MultiLevel* multi;
+	EditorLevel* editor = NULL;
+	MultiLevel* multi = NULL;
 
 
 };
