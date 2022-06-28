@@ -1,5 +1,5 @@
 #pragma once
-#include <bass.h>
+#include "extra/bass.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -8,9 +8,10 @@
 class Audio
 {
 public:
-	std::vector<HSAMPLE> samples; //para nuestro manager
+	std::vector<HSAMPLE> samples; //para nuestro manager game sounds
 	HSAMPLE sample; //aqui guardamos el handler del sample que retorna BASS_SampleLoad
 
+	std::vector<HSAMPLE> Menu_samples; //menu souns
 	Audio(); //importante poner sample a cero aqui
 	~Audio(); //aqui deberiamos liberar el sample con BASS_SampleFree
 	/*
@@ -21,10 +22,9 @@ public:
 	static HCHANNEL* Play(const char* filename); //version estática para ir mas rapido
 	*/
 	//initial function se usa de prueba
-	void PlayGameSound(int pos);
-	void LoadSample(const char* fileName);
+	void PlayGameSound(int pos, int where);
+	void LoadSample(const char* fileName, int vector);
 	
-
 };
 
 

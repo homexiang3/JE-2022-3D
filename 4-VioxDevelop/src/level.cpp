@@ -3,7 +3,7 @@
 #include "input.h"
 //UTILS
 
-void InitLevels(std::vector<PlayLevel*>& levels, EditorLevel*& editor, MultiLevel*& multi, StaticLevel*& intro, StaticLevel*& end) {
+void InitLevels(std::vector<PlayLevel*>& levels, EditorLevel*& editor, MultiLevel*& multi) {
 	//we defined just 3 levels
 	levels.reserve(3);
 	levels.push_back(new PlayLevel("data/maps/map1.scene", "data/map1/enemies.txt"));
@@ -11,9 +11,6 @@ void InitLevels(std::vector<PlayLevel*>& levels, EditorLevel*& editor, MultiLeve
 	levels.push_back(new PlayLevel("data/maps/map3.scene", "data/map3/enemies.txt"));
 	editor = new EditorLevel();
 	multi = new MultiLevel();
-	intro = new StaticLevel("data/maps/map1.scene");
-	end = new StaticLevel("data/maps/map3.scene");
-
 
 }
 
@@ -67,19 +64,21 @@ void RenderMinimap(int widthStart, sPlayer*& player, std::vector<sPlayer*>& enem
 		entityPoint->render(&cam);
 
 	}
+
+
 	//restore viewport
 	glViewport(0, 0, window_width, window_height);
 }
 
 
-void SetupCam(Matrix44& playerModel, Camera* cam, Vector3 eyePos, Vector3 centerPos, Vector3 upPos)
+void SetupCam(Matrix44& playerModel, Camera* cam)
 {
 	//if (scene->cameraLocked) {
 	//camera following plane
-	Vector3 desiredEye = playerModel * eyePos;
+	Vector3 desiredEye = playerModel * Vector3(0, 3, 5);
 	Vector3 eye = Lerp(cam->eye, desiredEye, 5.f * Game::instance->elapsed_time);
-	Vector3 center = playerModel * centerPos;
-	Vector3 up = upPos;
+	Vector3 center = playerModel * Vector3(0.0f, 0.0f, -5.0f);
+	Vector3 up = Vector3(0.0f, 1.0f, 0.0f);
 
 	//set the camera 
 	cam->lookAt(eye, center, up);
@@ -87,60 +86,6 @@ void SetupCam(Matrix44& playerModel, Camera* cam, Vector3 eyePos, Vector3 center
 }
 
 
-//STATIC (MENU / ENDSCREEN)
-
-StaticLevel::StaticLevel(const char* map) {
-	//player
-	this->player = new sPlayer("data/skelly.mesh", "data/minichar_tex.png");
-	//import map
-	ImportMap(map, this->entities, this->groundMesh, this->skyMesh);
-
-	//camera
-	int window_width = Game::instance->window_width;
-	int window_height = Game::instance->window_height;
-
-	this->cam = new Camera();
-	this->cam->lookAt(Vector3(0.f, 100.f, 100.f), Vector3(0.f, 0.f, 0.f), Vector3(0.f, 1.f, 0.f)); //position the camera and point to 0,0,0
-	this->cam->setPerspective(70.f, window_width / (float)window_height, 0.1f, 10000.f); //set the projection, we want to be perspective
-}
-
-void StaticLevel::Render() {
-
-	Matrix44 playerModel = this->player->getModel();
-	SetupCam(playerModel, this->cam, Vector3(0, 3, 5), Vector3(5.0f, 0.0f, -5.0f), Vector3(0.0f, 1.0f, 0.0f));
-	this->player->character_mesh->anim = this->player->renderAnim();
-	
-	this->cam->enable();
-	//Render
-	//scene->skyMesh->model.setTranslation(camera->eye.x, camera->eye.y - 20.0f, camera->eye.z); solo usarlo si el mapa fuera muy grande
-	glDisable(GL_DEPTH_TEST);
-	this->skyMesh->render(this->cam);//cielo
-	glEnable(GL_DEPTH_TEST);
-
-	this->groundMesh->render(this->cam); //suelo
-
-	this->player->character_mesh->render(this->cam);//player
-
-
-	for (size_t i = 0; i < this->entities.size(); i++)//entities added
-	{
-		EntityMesh* entity = this->entities[i];
-		entity->render(this->cam);
-	}
-
-	int window_width = Game::instance->window_width;
-	int window_height = Game::instance->window_height;
-
-	drawText(window_width - window_width * 0.3 , window_height - window_height * 0.4, "PLAY", Vector3(1, 1, 1), 4);
-	drawText(window_width - window_width * 0.3, window_height - window_height * 0.3, "TUTORIAL", Vector3(1, 1, 1), 4);
-	drawText(window_width - window_width * 0.3, window_height - window_height * 0.2, "MULTI", Vector3(1, 1, 1), 4);
-
-	
-
-}
-void StaticLevel::Update(float seconds_elapsed) {
-
-}
 
 //EDITOR
 
@@ -344,8 +289,9 @@ void EditorLevel::removeEntities() {
 		this->entities.pop_back();
 	}
 }
-void EditorLevel::clearEditor()
-{
+
+void EditorLevel::clearEditor() {
+
 	this->removeEntities();
 	this->skyMesh = NULL;
 	this->groundMesh = NULL;
@@ -374,15 +320,79 @@ Vector3 EditorLevel::getRayOrigin() {
 
 
 //MULTIPLAYER 
+
+void MultiLevel::drawHP(Mesh quad, Texture* tex, Matrix44 anim)
+{
+	Shader* a_shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
+
+
+	if (!a_shader) return;
+	a_shader->enable();
+
+	a_shader->setUniform("u_color", Vector4(1, 1, 1, 1));
+	a_shader->setUniform("u_viewprojection", cam2D.viewprojection_matrix);
+	if (tex != NULL) {
+		a_shader->setUniform("u_texture", tex, 0);
+	}
+	a_shader->setUniform("u_time", time);
+	a_shader->setUniform("u_tex_tiling", 1.0f);
+	a_shader->setUniform("u_model", anim);
+	quad.render(GL_TRIANGLES);
+	a_shader->disable();
+	
+}
+
+void MultiLevel::updateHealthBar() {
+	int window_width = Game::instance->window_width;
+	int window_height = Game::instance->window_height;
+
+	const int max_health = 10;
+
+	int health = this->player1->health;
+	float center_x = -78 - 1.5 * (max_health - health);
+	float center_y = 90;
+	float w = 30 - 3 * (max_health - health);
+	float h = 5;
+
+	this->player1HP_quad.vertices.clear();
+
+	//create six vertices (3 for upperleft triangle and 3 for lowerright)
+
+	this->player1HP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
+	this->player1HP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
+	this->player1HP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y - h * 0.5f, 0.0f));
+	this->player1HP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y + h * 0.5f, 0.0f));
+	this->player1HP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
+	this->player1HP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
+
+	health = this->player2->health;
+	center_x = 22 - 1.5 * (max_health - health);
+	center_y = 90;
+	w = 30 - 3 * (max_health - health);
+	h = 5;
+
+	this->player2HP_quad.vertices.clear();
+
+	//create six vertices (3 for upperleft triangle and 3 for lowerright)
+
+	this->player2HP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
+	this->player2HP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
+	this->player2HP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y - h * 0.5f, 0.0f));
+	this->player2HP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y + h * 0.5f, 0.0f));
+	this->player2HP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
+	this->player2HP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
+
+}
+
 MultiLevel::MultiLevel() {
 
 
 	//players
 	this->player1 = new sPlayer("data/skelly.mesh", "data/minichar_tex.png");
-	this->player1->pos = Vector3(0, 0, -20); //se podria pasar por constructor
+	this->player1->pos = Vector3(0, 0, -10); //se podria pasar por constructor
 	this->player1->yaw = 180;
 	this->player2 = new sPlayer("data/skelly.mesh", "data/minichar_tex.png");
-	this->player2->pos = Vector3(0, 0, 20);
+	this->player2->pos = Vector3(0, 0, 10);
 	
 	//cams
 	int window_width = Game::instance->window_width;
@@ -398,6 +408,11 @@ MultiLevel::MultiLevel() {
 
 	//get objects
 	ImportMap("data/maps/map1.scene", this->entities, this->groundMesh, this->skyMesh);
+	
+	//HPs
+	this->player1HP_quad.createQuad(-78, 90, 30, 5, true);
+	this->player2HP_quad.createQuad(22, 90, 30, 5, true);
+	this->quadTex = Texture::Get("data/menu/healthbar.tga");
 }
 
 void MultiLevel::Render() {
@@ -411,7 +426,7 @@ void MultiLevel::Render() {
 	cam1->aspect = half_width / window_height;
 
 	Matrix44 player1Model = this->player1->getModel();
-	SetupCam(player1Model, this->cam1, Vector3(0, 3, 5), Vector3(0.0f, 0.0f, -5.0f), Vector3(0.0f, 1.0f, 0.0f));
+	SetupCam(player1Model, this->cam1);
 	
 
 	cam1->enable();
@@ -422,7 +437,7 @@ void MultiLevel::Render() {
 	cam2->aspect = half_width / window_height;
 
 	Matrix44 player2Model = this->player2->getModel();
-	SetupCam(player2Model, this->cam2, Vector3(0, 3, 5), Vector3(0.0f, 0.0f, -5.0f), Vector3(0.0f, 1.0f, 0.0f));
+	SetupCam(player2Model, this->cam2);
 	
 	
 	cam2->enable();
@@ -435,6 +450,12 @@ void MultiLevel::Render() {
 	enemies.push_back(this->player1);
 	RenderMinimap(window_width, this->player2, enemies, this->groundMesh, this->entities);
 
+	//Hp bars
+	this->drawHP(this->player1HP_quad, this->quadTex, Matrix44());
+	this->drawHP(this->player2HP_quad, this->quadTex, Matrix44());
+	//hp txt
+	drawText(2.8 * window_width/800, 22 * window_height/600, "HP", Vector3(1, 1, 1), window_width / 400);
+	drawText(402.8  *window_width / 800, 22 * window_height / 600, "HP", Vector3(1, 1, 1), window_width / 400);
 }
 
 
@@ -446,7 +467,11 @@ void MultiLevel::Update(float seconds_elapsed) {
 	enemies.push_back(this->player1);
 	this->player2->playerMovement(enemies,this->entities, seconds_elapsed, true);
 
-	
+	if (Input::wasKeyPressed(SDL_SCANCODE_T)) {
+		this->player1->health--;
+		this->player2->health--;
+		updateHealthBar();
+	}
 }
 
 void MultiLevel::RenderWorld(Camera* cam) {
@@ -498,14 +523,64 @@ PlayLevel::PlayLevel(const char* map, const char* enemiesPath) {
 	this->cam = new Camera();
 	this->cam->lookAt(Vector3(0.f, 100.f, 100.f), Vector3(0.f, 0.f, 0.f), Vector3(0.f, 1.f, 0.f)); //position the camera and point to 0,0,0
 	this->cam->setPerspective(70.f, window_width / (float)window_height, 0.1f, 10000.f); //set the projection, we want to be perspective
+
+	//player hp
+	this->playerHP_quad.createQuad(-78, 90, 30, 5,true);
+	this->quadTex = Texture::Get("data/menu/healthbar.tga");
+	
+}
+
+void PlayLevel::drawHP(Mesh quad, Texture* tex, Matrix44 anim )
+{
+	Shader* a_shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
+
+
+	if (!a_shader) return;
+	a_shader->enable();
+
+	a_shader->setUniform("u_color", Vector4(1, 1, 1, 1));
+	a_shader->setUniform("u_viewprojection", cam2D.viewprojection_matrix);
+	if (tex != NULL) {
+		a_shader->setUniform("u_texture", tex, 0);
+	}
+	a_shader->setUniform("u_time", time);
+	a_shader->setUniform("u_tex_tiling", 1.0f);
+	a_shader->setUniform("u_model", anim);
+	quad.render(GL_TRIANGLES);
+	a_shader->disable();
+}
+
+void PlayLevel::updateHealthBar( ) {
+	int window_width = Game::instance->window_width;
+	int window_height = Game::instance->window_height;
+
+	const int max_health = 10;
+
+	int health = this->player->health;
+	float center_x = -78 -1.5 * (max_health - health);
+	float center_y = 90;
+	float w = 30-3*(max_health - health);
+	float h =5;
+
+	this->playerHP_quad.vertices.clear();
+
+	//create six vertices (3 for upperleft triangle and 3 for lowerright)
+
+	this->playerHP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
+	this->playerHP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
+	this->playerHP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y - h * 0.5f, 0.0f));
+	this->playerHP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y + h * 0.5f, 0.0f));
+	this->playerHP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
+	this->playerHP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
 }
 
 void PlayLevel::Render() {
 
 	int window_width = Game::instance->window_width;
+	int window_height = Game::instance->window_height;
 
 	Matrix44 playerModel = this->player->getModel();
-	SetupCam(playerModel, this->cam, Vector3(0, 3, 5), Vector3(0.0f, 0.0f, -5.0f), Vector3(0.0f, 1.0f, 0.0f));
+	SetupCam(playerModel, this->cam);
 
 	
 	this->player->character_mesh->anim = this->player->renderAnim(); //cojo la anim directamente desde la mesh para no tener que ir pasandola
@@ -524,6 +599,11 @@ void PlayLevel::Render() {
 	this->groundMesh->render(this->cam); //suelo
 
 	this->player->character_mesh->render(this->cam);//player
+	for (size_t i = 0; i < this->player->colliders.size(); i++)
+	{
+		EntityMesh* playerMesh = this->player->character_mesh;
+		this->player->colliders[i]->updateRenderCollider(playerMesh, this->cam);
+	}
 
 	for (size_t i = 0; i < this->entities.size(); i++)//entities added
 	{
@@ -545,6 +625,10 @@ void PlayLevel::Render() {
 
 	RenderMinimap(window_width, this->player, this->enemies, this->groundMesh, this->entities);
 
+	//hp
+	this->drawHP(this->playerHP_quad, this->quadTex, Matrix44());
+	drawText(2.8 * window_width / 800, 22 * window_height / 600, "HP", Vector3(1, 1, 1), window_width / 400);
+
 }
 
 void PlayLevel::Update(float seconds_elapsed) {
@@ -565,6 +649,11 @@ void PlayLevel::Update(float seconds_elapsed) {
 		int nextLevel = (s->currentLevel + 1) % s->levels.size();
 		s->currentLevel = nextLevel;
 		std::cout << "going to level " << s->currentLevel << std::endl; }
+
+	if (Input::wasKeyPressed(SDL_SCANCODE_T)) {
+		this->player->health --;
+		updateHealthBar();
+	}
 
 }
 

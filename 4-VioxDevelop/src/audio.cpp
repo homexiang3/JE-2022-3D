@@ -24,10 +24,12 @@ HCHANNEL* Audio::Play(const char* filename) {
 
 }
 */
-void Audio::PlayGameSound(int pos)
+void Audio::PlayGameSound(int pos, int where)
 {
 	//El handler para un sample
-	HSAMPLE hSample = this->samples[pos];
+	HSAMPLE hSample;
+	if (where == 1) hSample= this->samples[pos];
+	else if (where == 2) hSample = this->Menu_samples[pos];
 
 	HCHANNEL hSampleChannel = BASS_SampleGetChannel(hSample, false);
 
@@ -35,7 +37,7 @@ void Audio::PlayGameSound(int pos)
 	BASS_ChannelPlay(hSampleChannel, true);
 }
 
-void Audio::LoadSample(const char* fileName)
+void Audio::LoadSample(const char* fileName, int where)
 {
 	//El handler para un sample
 	HSAMPLE hSample;
@@ -47,6 +49,8 @@ void Audio::LoadSample(const char* fileName)
 	{
 		std::cout << " + Error load  " << fileName << std::endl;
 	}
-	std::cout << " + AUDIO load " << fileName << std::endl;
-	this->samples.push_back(hSample);
+	std::cout << " + AUDIO load" << fileName << std::endl;
+	if (where == 1)this->samples.push_back(hSample);
+	else if (where == 2)this->Menu_samples.push_back(hSample);
 }
+

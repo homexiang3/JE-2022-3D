@@ -6,22 +6,14 @@
 #include <iostream>
 #include "level.h"
 
-struct optionBoxes {
-	//para tener las diferentes option boxes
-	const char* text;
-	int width;
-	int height;
-	EntityMesh* trigger;
-};
-
 Scene::Scene()
 {
-	//alguna funcion para cargar desde fichero el anterior estado de la scene?
+
 	//init stages
 	InitStages(stages);
 
 	//init levels
-	InitLevels(levels, editor, multi, intro, end);
+	InitLevels(levels, editor, multi);
 	
 	//charge audio
 	this->audio = new Audio();
@@ -29,7 +21,13 @@ Scene::Scene()
 	if (BASS_Init(-1, 44100, 0, 0, NULL) == false) { //-1 significa usar el por defecto del sistema operativo
 		std::cout << "ERROR initializing audio" << std::endl;
 	}
-	audio->LoadSample("data/music/sfx_enter.wav");
+	audio->LoadSample("data/music/sfx_enter.wav",1); // 1 to be loaded in the in-game samples
+	
+	// menu samples 
+	audio->LoadSample("data/music/intro_music.wav", 2);// 2 to be loaded into the menu sounds
+	audio->LoadSample("data/music/sfx_menu.wav", 2);
+	audio->LoadSample("data/music/sfx_enter.wav", 2);
+	
 		
 }
 

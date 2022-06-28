@@ -2,6 +2,10 @@
 #define STAGE_H
 
 #include <vector>
+#include "mesh.h"
+#include "camera.h"
+#include "texture.h"
+#include "framework.h"
 
 enum STAGE_ID {
 	INTRO = 0,
@@ -20,12 +24,41 @@ public:
 	virtual void Update(float seconds_elapsed) = 0;
 };
 
+struct textStruct {
+	char* txt;
+	Vector2 pos;
+	float scale;
+};
+
 class IntroStage : public Stage {
 public:
 	STAGE_ID GetId() { return STAGE_ID::INTRO; };
+	
 	void Render();
 	void Update(float seconds_elapsed);
+	
+	//Mesh xd= xd.createQuad(100,100,100,100,true);
+	
+	int initSize =0;
 
+	//GUI
+	//void moveQuad(Mesh* quad, float center_x, float center_y, float w, float h);
+
+	int menuPointer=0;
+	Texture* quadTex;
+	Texture* menuPointer_tex;
+	Mesh menuPtr_mesh;
+	std::vector<Mesh> quads;
+	Camera cam2D;
+	std::vector<textStruct> tags;
+
+	void initQuads();
+	IntroStage() {
+		initQuads();
+	};
+
+	void renderQuad(Mesh quad, Texture* tex, Matrix44 anim);
+	void movePtr();
 };
 
 class TutorialStage : public Stage {

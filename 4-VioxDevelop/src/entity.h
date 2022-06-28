@@ -62,7 +62,13 @@ public:
 	void render( Camera* camera );
 	void update(float dt);
 };
+//estructura para guardar las zonas de collision
+struct Collider {
+	const char* name = NULL;
+	EntityMesh* colliderMesh = NULL;
 
+	void updateRenderCollider(EntityMesh* playerMesh, Camera* camera);
+};
 //estructura para el player
 struct sPlayer {
 	sPlayer(const char* meshPath, const char* texPath);
@@ -73,12 +79,15 @@ struct sPlayer {
 	float playerVel;
 	float yaw = 0.0f;
 	//float pitch = 0.0f; //para el first person
+	//colliders
+	std::vector<Collider*> colliders;
 	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision)
-	int health;
-	EntityMesh* character_mesh;
+	int health = 10;
+	EntityMesh* character_mesh = NULL;
 	Vector2 dash_direction;
 	float jumpLock;
-
+	float max_invulnerability_time = 2;
+	float invulnerability_time;
 	//anims
 	std::vector<Animation*> anims;
 	int ctr = 0;
@@ -96,12 +105,15 @@ struct sPlayer {
 
 	Matrix44 getModel();
 	void initAnims();
+	void initColliders();
 	void playerMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, float seconds_elapsed, bool multi);
 	Vector3 playerCollision(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed);
 	void npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities,sPlayer* player, float seconds_elapsed);
 	void ChangeAnim(int i, float time);
 	Animation* renderAnim();
-
+	void punchCollision(std::vector<sPlayer*> enemies);
+	void kickCollision(std::vector<sPlayer*> enemies);
+	void updateInvulnerabilityTime(float seconds_elapsed);
 	
 };
 

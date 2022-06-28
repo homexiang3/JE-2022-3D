@@ -31,14 +31,12 @@ public:
 	//props of our game
 	Prop props[20];
 	//Entity* root;
-	STAGE_ID currentStage = STAGE_ID::PLAY;
+	STAGE_ID currentStage = STAGE_ID::INTRO;
 	int currentLevel = 0;
 	std::vector<Stage*> stages;
-	StaticLevel* intro = NULL;
-	StaticLevel* end = NULL;
 	std::vector<PlayLevel*> levels;
-	EditorLevel* editor = NULL;
-	MultiLevel* multi = NULL;
+	EditorLevel* editor;
+	MultiLevel* multi;
 
 
 };
