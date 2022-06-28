@@ -57,7 +57,7 @@ void RenderMinimap(int widthStart, sPlayer*& player, std::vector<sPlayer*>& enem
 	for (size_t i = 0; i < entities.size(); i++)
 	{
 		//optional
-		EntityMesh* entityPoint = new EntityMesh(GL_TRIANGLES, "data/sphere.obj", "", "data/shaders/basic.vs", "data/shaders/flat.fs", Vector4(1, 0, 0, 1));
+		EntityMesh* entityPoint = new EntityMesh(GL_TRIANGLES, "data/sphere.obj", "", "data/shaders/basic.vs", "data/shaders/flat.fs", Vector4(1, 0.5, 0.2, 1));
 		Matrix44 entityModel = entities[i]->model;
 		entityPoint->model = entityModel;
 		entityPoint->model.scale(6, 6, 6);
@@ -75,7 +75,7 @@ void SetupCam(Matrix44& playerModel, Camera* cam)
 {
 	//if (scene->cameraLocked) {
 	//camera following plane
-	Vector3 desiredEye = playerModel * Vector3(0, 3, 5);
+	Vector3 desiredEye = playerModel * Vector3(0, 4, 6);
 	Vector3 eye = Lerp(cam->eye, desiredEye, 5.f * Game::instance->elapsed_time);
 	Vector3 center = playerModel * Vector3(0.0f, 0.0f, -5.0f);
 	Vector3 up = Vector3(0.0f, 1.0f, 0.0f);
@@ -85,6 +85,51 @@ void SetupCam(Matrix44& playerModel, Camera* cam)
 	//}
 }
 
+void drawHP(Mesh quad, Texture* tex, Matrix44 anim, Camera cam2D)
+{
+	Shader* a_shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
+
+
+	if (!a_shader) return;
+	a_shader->enable();
+
+	a_shader->setUniform("u_color", Vector4(1, 1, 1, 1));
+	a_shader->setUniform("u_viewprojection", cam2D.viewprojection_matrix);
+	if (tex != NULL) {
+		a_shader->setUniform("u_texture", tex, 0);
+	}
+	a_shader->setUniform("u_time", time);
+	a_shader->setUniform("u_tex_tiling", 1.0f);
+	a_shader->setUniform("u_model", anim);
+	quad.render(GL_TRIANGLES);
+	a_shader->disable();
+
+}
+
+void updateHealthBar(float centerStart, Mesh& playerHP_quad, sPlayer* player) {
+	int window_width = Game::instance->window_width;
+	int window_height = Game::instance->window_height;
+
+	const int max_health = player->max_health;
+
+	int health = player->health;
+	float center_x = centerStart - 1.5 * (max_health - health);
+	float center_y = 90;
+	float w = 30 - 3 * (max_health - health);
+	float h = 5;
+
+	playerHP_quad.vertices.clear();
+
+	//create six vertices (3 for upperleft triangle and 3 for lowerright)
+
+	playerHP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
+	playerHP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
+	playerHP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y - h * 0.5f, 0.0f));
+	playerHP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y + h * 0.5f, 0.0f));
+	playerHP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
+	playerHP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
+
+}
 
 
 //EDITOR
@@ -321,78 +366,13 @@ Vector3 EditorLevel::getRayOrigin() {
 
 //MULTIPLAYER 
 
-void MultiLevel::drawHP(Mesh quad, Texture* tex, Matrix44 anim)
-{
-	Shader* a_shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
-
-
-	if (!a_shader) return;
-	a_shader->enable();
-
-	a_shader->setUniform("u_color", Vector4(1, 1, 1, 1));
-	a_shader->setUniform("u_viewprojection", cam2D.viewprojection_matrix);
-	if (tex != NULL) {
-		a_shader->setUniform("u_texture", tex, 0);
-	}
-	a_shader->setUniform("u_time", time);
-	a_shader->setUniform("u_tex_tiling", 1.0f);
-	a_shader->setUniform("u_model", anim);
-	quad.render(GL_TRIANGLES);
-	a_shader->disable();
-	
-}
-
-void MultiLevel::updateHealthBar() {
-	int window_width = Game::instance->window_width;
-	int window_height = Game::instance->window_height;
-
-	const int max_health = 10;
-
-	int health = this->player1->health;
-	float center_x = -78 - 1.5 * (max_health - health);
-	float center_y = 90;
-	float w = 30 - 3 * (max_health - health);
-	float h = 5;
-
-	this->player1HP_quad.vertices.clear();
-
-	//create six vertices (3 for upperleft triangle and 3 for lowerright)
-
-	this->player1HP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
-	this->player1HP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
-	this->player1HP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y - h * 0.5f, 0.0f));
-	this->player1HP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y + h * 0.5f, 0.0f));
-	this->player1HP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
-	this->player1HP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
-
-	health = this->player2->health;
-	center_x = 22 - 1.5 * (max_health - health);
-	center_y = 90;
-	w = 30 - 3 * (max_health - health);
-	h = 5;
-
-	this->player2HP_quad.vertices.clear();
-
-	//create six vertices (3 for upperleft triangle and 3 for lowerright)
-
-	this->player2HP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
-	this->player2HP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
-	this->player2HP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y - h * 0.5f, 0.0f));
-	this->player2HP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y + h * 0.5f, 0.0f));
-	this->player2HP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
-	this->player2HP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
-
-}
-
 MultiLevel::MultiLevel() {
 
 
 	//players
-	this->player1 = new sPlayer("data/skelly.mesh", "data/minichar_tex.png");
-	this->player1->pos = Vector3(0, 0, -10); //se podria pasar por constructor
+	this->player1 = new sPlayer("data/skelly.mesh", "data/minichar_tex.png", Vector3(0,0,-10));
 	this->player1->yaw = 180;
-	this->player2 = new sPlayer("data/skelly.mesh", "data/minichar_tex.png");
-	this->player2->pos = Vector3(0, 0, 10);
+	this->player2 = new sPlayer("data/skelly.mesh", "data/minichar_tex.png", Vector3(0,0,10));
 	
 	//cams
 	int window_width = Game::instance->window_width;
@@ -413,6 +393,17 @@ MultiLevel::MultiLevel() {
 	this->player1HP_quad.createQuad(-78, 90, 30, 5, true);
 	this->player2HP_quad.createQuad(22, 90, 30, 5, true);
 	this->quadTex = Texture::Get("data/menu/healthbar.tga");
+}
+
+void MultiLevel::resetLevel() {
+	this->player1->pos = this->player1->spawnPos;
+	this->player1->yaw = 180;
+	this->player1->health = this->player1->max_health;
+	updateHealthBar(-78, player1HP_quad, this->player1);
+	this->player2->pos = this->player2->spawnPos;
+	this->player2->yaw = 0;
+	this->player1->health = this->player1->max_health;
+	updateHealthBar(22, player2HP_quad, this->player2);
 }
 
 void MultiLevel::Render() {
@@ -451,8 +442,8 @@ void MultiLevel::Render() {
 	RenderMinimap(window_width, this->player2, enemies, this->groundMesh, this->entities);
 
 	//Hp bars
-	this->drawHP(this->player1HP_quad, this->quadTex, Matrix44());
-	this->drawHP(this->player2HP_quad, this->quadTex, Matrix44());
+	drawHP(this->player1HP_quad, this->quadTex, Matrix44(),this->cam2D);
+	drawHP(this->player2HP_quad, this->quadTex, Matrix44(),this->cam2D);
 	//hp txt
 	drawText(2.8 * window_width/800, 22 * window_height/600, "HP", Vector3(1, 1, 1), window_width / 400);
 	drawText(402.8  *window_width / 800, 22 * window_height / 600, "HP", Vector3(1, 1, 1), window_width / 400);
@@ -460,6 +451,9 @@ void MultiLevel::Render() {
 
 
 void MultiLevel::Update(float seconds_elapsed) {
+	this->player1->updateInvulnerabilityTime(seconds_elapsed);
+	this->player2->updateInvulnerabilityTime(seconds_elapsed);
+
 	std::vector<sPlayer*> enemies;
 	enemies.push_back(this->player2);
 	this->player1->playerMovement(enemies, this->entities, seconds_elapsed, false);
@@ -470,7 +464,12 @@ void MultiLevel::Update(float seconds_elapsed) {
 	if (Input::wasKeyPressed(SDL_SCANCODE_T)) {
 		this->player1->health--;
 		this->player2->health--;
-		updateHealthBar();
+		updateHealthBar(-78, this->player1HP_quad, this->player1);
+		updateHealthBar(22, this->player2HP_quad, this->player2);
+	}
+
+	if (Input::wasKeyPressed(SDL_SCANCODE_P)) {
+		this->resetLevel();
 	}
 }
 
@@ -487,8 +486,18 @@ void MultiLevel::RenderWorld(Camera* cam) {
 	this->groundMesh->render(cam); //suelo
 
 	this->player1->character_mesh->render(cam);//player
+	for (size_t i = 0; i < this->player1->colliders.size(); i++)
+	{
+		EntityMesh* playerMesh = this->player1->character_mesh;
+		this->player1->colliders[i]->updateCollider(playerMesh, cam);
+	}
 
 	this->player2->character_mesh->render(cam);//player
+	for (size_t i = 0; i < this->player2->colliders.size(); i++)
+	{
+		EntityMesh* playerMesh = this->player2->character_mesh;
+		this->player2->colliders[i]->updateCollider(playerMesh, cam);
+	}
 
 	for (size_t i = 0; i < this->entities.size(); i++)//entities added
 	{
@@ -502,19 +511,11 @@ void MultiLevel::RenderWorld(Camera* cam) {
 PlayLevel::PlayLevel(const char* map, const char* enemiesPath) {
 
 	//player
-	this->player = new sPlayer("data/skelly.mesh", "data/minichar_tex.png");
+	this->player = new sPlayer("data/skelly.mesh", "data/minichar_tex.png", Vector3(0,0,0));
 	
 	//get objects
 	ImportMap(map, this->entities, this->groundMesh, this->skyMesh);
 	ImportEnemies(enemiesPath, this->enemies);
-	//testeo de posiciones -> hacerlo desde el fichero tmb?
-	for (size_t i = 0; i < enemies.size(); i++)
-	{
-		Vector3 initPos = Vector3((i + 1) * 10, 0, (i + 1) * 10);
-		enemies[i]->spawnPos = initPos;
-		enemies[i]->pos = initPos;
-		
-	}
 
 	//camera
 	int window_width = Game::instance->window_width;
@@ -530,49 +531,21 @@ PlayLevel::PlayLevel(const char* map, const char* enemiesPath) {
 	
 }
 
-void PlayLevel::drawHP(Mesh quad, Texture* tex, Matrix44 anim )
-{
-	Shader* a_shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
+void PlayLevel::resetLevel() {
+	this->player->pos = this->player->spawnPos;
+	this->player->health = this->player->max_health;
+	updateHealthBar(-78, playerHP_quad, this->player);
+	this->player->yaw = 0;
+	for (size_t i = 0; i < this->enemies.size(); i++)
+	{
+		sPlayer* enemy = enemies[i];
+		enemy->pos = enemy->spawnPos;
+		enemy->health = enemy->max_health;
+		enemy->yaw = 0;
 
-
-	if (!a_shader) return;
-	a_shader->enable();
-
-	a_shader->setUniform("u_color", Vector4(1, 1, 1, 1));
-	a_shader->setUniform("u_viewprojection", cam2D.viewprojection_matrix);
-	if (tex != NULL) {
-		a_shader->setUniform("u_texture", tex, 0);
 	}
-	a_shader->setUniform("u_time", time);
-	a_shader->setUniform("u_tex_tiling", 1.0f);
-	a_shader->setUniform("u_model", anim);
-	quad.render(GL_TRIANGLES);
-	a_shader->disable();
 }
 
-void PlayLevel::updateHealthBar( ) {
-	int window_width = Game::instance->window_width;
-	int window_height = Game::instance->window_height;
-
-	const int max_health = 10;
-
-	int health = this->player->health;
-	float center_x = -78 -1.5 * (max_health - health);
-	float center_y = 90;
-	float w = 30-3*(max_health - health);
-	float h =5;
-
-	this->playerHP_quad.vertices.clear();
-
-	//create six vertices (3 for upperleft triangle and 3 for lowerright)
-
-	this->playerHP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
-	this->playerHP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
-	this->playerHP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y - h * 0.5f, 0.0f));
-	this->playerHP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y + h * 0.5f, 0.0f));
-	this->playerHP_quad.vertices.push_back(Vector3(center_x - w * 0.5f, center_y - h * 0.5f, 0.0f));
-	this->playerHP_quad.vertices.push_back(Vector3(center_x + w * 0.5f, center_y + h * 0.5f, 0.0f));
-}
 
 void PlayLevel::Render() {
 
@@ -602,7 +575,7 @@ void PlayLevel::Render() {
 	for (size_t i = 0; i < this->player->colliders.size(); i++)
 	{
 		EntityMesh* playerMesh = this->player->character_mesh;
-		this->player->colliders[i]->updateRenderCollider(playerMesh, this->cam);
+		this->player->colliders[i]->updateCollider(playerMesh, this->cam);
 	}
 
 	for (size_t i = 0; i < this->entities.size(); i++)//entities added
@@ -614,19 +587,16 @@ void PlayLevel::Render() {
 	for (size_t i = 0; i < this->enemies.size(); i++)//enemies
 	{
 		sPlayer* enemy = this->enemies[i];
-		//rescale (con anim se vuelve gigante)
-		Matrix44 enemyModel = enemy->getModel();
-		enemyModel.scale(enemy->side * 0.015, 0.015, 0.015);
-		playerModel.rotate(180 * DEG2RAD, Vector3(0,1,0));
-		enemies[i]->character_mesh->model = enemyModel; //si se carga algo diferente al skelly va mal
+		enemy->character_mesh->anim = enemy->renderAnim();
 
 		enemy->character_mesh->render(this->cam);
+
 	}
 
 	RenderMinimap(window_width, this->player, this->enemies, this->groundMesh, this->entities);
 
 	//hp
-	this->drawHP(this->playerHP_quad, this->quadTex, Matrix44());
+	drawHP(this->playerHP_quad, this->quadTex, Matrix44(), this->cam2D);
 	drawText(2.8 * window_width / 800, 22 * window_height / 600, "HP", Vector3(1, 1, 1), window_width / 400);
 
 }
@@ -634,9 +604,12 @@ void PlayLevel::Render() {
 void PlayLevel::Update(float seconds_elapsed) {
 	
 	this->player->playerMovement(this->enemies, this->entities, seconds_elapsed, false);
+	this->player->updateInvulnerabilityTime(seconds_elapsed);
 	for (size_t i = 0; i < this->enemies.size(); i++)//enemies
 	{
+
 		sPlayer* enemy = this->enemies[i];
+		enemy->updateInvulnerabilityTime(seconds_elapsed);
 		//borrarse a el mismo de la lista de enemigos a colisionar
 		std::vector<sPlayer*> e = this->enemies;
 		e.erase(e.begin() + i);
@@ -652,7 +625,10 @@ void PlayLevel::Update(float seconds_elapsed) {
 
 	if (Input::wasKeyPressed(SDL_SCANCODE_T)) {
 		this->player->health --;
-		updateHealthBar();
+		updateHealthBar(-78, this->playerHP_quad, this->player);
+	}
+	if (Input::wasKeyPressed(SDL_SCANCODE_P)) {
+		this->resetLevel();
 	}
 
 }

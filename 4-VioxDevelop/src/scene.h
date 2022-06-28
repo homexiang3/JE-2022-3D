@@ -48,3 +48,4 @@ void ImportEnemies(const char* path, std::vector<sPlayer*>& enemies);
 //utils
 Vector3 Lerp(Vector3 a, Vector3 b, float t);
 float sign(float value);
+void renderGUI(float x, float y, float w, float h, Texture* tex, bool flipXV);

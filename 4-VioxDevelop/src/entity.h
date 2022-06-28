@@ -67,11 +67,11 @@ struct Collider {
 	const char* name = NULL;
 	EntityMesh* colliderMesh = NULL;
 
-	void updateRenderCollider(EntityMesh* playerMesh, Camera* camera);
+	void updateCollider(EntityMesh* playerMesh, Camera* camera);
 };
 //estructura para el player
 struct sPlayer {
-	sPlayer(const char* meshPath, const char* texPath);
+	sPlayer(const char* meshPath, const char* texPath, Vector3 spawn);
 
 	Vector3 spawnPos;
 	Vector3 pos;
@@ -82,6 +82,7 @@ struct sPlayer {
 	//colliders
 	std::vector<Collider*> colliders;
 	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision)
+	int max_health = 10;
 	int health = 10;
 	EntityMesh* character_mesh = NULL;
 	Vector2 dash_direction;
@@ -93,6 +94,7 @@ struct sPlayer {
 	int ctr = 0;
 	float animTimer = 0.0f;
 	int side = -1;
+
 
 	Animation* idle = NULL;
 	Animation* walk = NULL;

@@ -1,5 +1,5 @@
-data/skelly.mesh data/minichar_tex.png 5 1
-data/skelly.mesh data/minichar_tex.png 5 1
-data/skelly.mesh data/minichar_tex.png 5 1
-data/skelly.mesh data/minichar_tex.png 5 1
-data/skelly.mesh data/minichar_tex.png 5 1
+data/skelly.mesh data/minichar_tex.png 5 1 -10,0,15
+data/skelly.mesh data/minichar_tex.png 5 1 -20,0,20
+data/skelly.mesh data/minichar_tex.png 5 1 10,0,-15
+data/skelly.mesh data/minichar_tex.png 5 1 20,0,-20
+data/skelly.mesh data/minichar_tex.png 5 1 30,0,30

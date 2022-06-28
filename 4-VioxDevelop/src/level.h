@@ -52,9 +52,8 @@ public:
 	Camera cam2D;
 	void Render();
 	void Update(float seconds_elapsed);
+	void resetLevel();
 
-	void drawHP(Mesh quad, Texture* tex, Matrix44 anim = Matrix44());
-	void updateHealthBar();
 };
 
 class MultiLevel : public Level{
@@ -69,10 +68,9 @@ public:
 	void Render();
 	void Update(float seconds_elapsed);
 	void RenderWorld(Camera* cam);
+	void resetLevel();
 
 	//hp bars
-	void drawHP(Mesh quad, Texture* tex, Matrix44 anim);
-	void updateHealthBar();
 	Texture* quadTex;
 	Mesh player1HP_quad;
 	Mesh player2HP_quad;
@@ -97,3 +95,5 @@ public:
 void InitLevels(std::vector<PlayLevel*>& levels, EditorLevel*& editor, MultiLevel*& multi);
 void RenderMinimap(int widthStart, sPlayer*& player, std::vector<sPlayer*>& enemies, EntityMesh* groundMesh, std::vector<EntityMesh*>& entities);
 void SetupCam(Matrix44& playerModel, Camera* cam);
+void drawHP(Mesh quad, Texture* tex, Matrix44 anim, Camera cam2D);
+void updateHealthBar(float centerStart, Mesh& playerHP_quad, sPlayer* player);

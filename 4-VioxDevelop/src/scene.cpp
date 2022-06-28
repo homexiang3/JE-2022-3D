@@ -214,14 +214,50 @@ void ImportEnemies(const char* path, std::vector<sPlayer*>& enemies) {
 		ss >> speed;
 		int health;
 		ss >> health;
+		Vector3 pos = ReadVector3(ss);
 		//create entity
-		sPlayer* enemy = new sPlayer(meshPath.c_str(), texPath.c_str());
-		enemy->playerVel = speed;
+		sPlayer* enemy = new sPlayer(meshPath.c_str(), texPath.c_str(),pos);
+		enemy->playerVel = speed; //modify char default speed
+		enemy->max_health = health; //modify char default health
 		enemy->health = health;
-		//definir la pos random?
-
 		enemies.push_back(enemy);
 	}
 	std::cout << " + Success: enemies imported from "<< path << std::endl;
 
+}
+
+void renderGUI(float x, float y, float w, float h, Texture* tex, bool flipYV) {
+	int windowWidth = Game::instance->window_width;
+	int windowHeight = Game::instance->window_height;
+	Mesh quad;
+	quad.createQuad(x, y, w, h, flipYV);
+
+	Camera cam2D;
+	cam2D.setOrthographic(0, windowWidth, windowHeight, 0, -1, 1);
+	assert(mesh != NULL, "mesh in renderMesh was null");
+
+	Shader* shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
+
+	if (!shader) return;
+
+	//enable shader
+	shader->enable();
+
+	//upload uniforms
+	shader->setUniform("u_color", Vector4(1, 1, 1, 1));
+	shader->setUniform("u_viewprojection", cam2D.viewprojection_matrix);
+	if (tex != NULL)
+	{
+		shader->setUniform("u_texture", tex, 0);
+	}
+	shader->setUniform("u_time", time);
+	shader->setUniform("u_text_tiling", 1.0f);
+	Matrix44 quadModel;
+	//quadModel.translate(sin(Game::instance->time ) * 20, 0, 0);
+	shader->setUniform("u_model", quadModel);
+	//do the draw call
+	quad.render(GL_TRIANGLES);
+
+	//disable shader
+	shader->disable();
 }

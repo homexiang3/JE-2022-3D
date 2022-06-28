@@ -146,7 +146,7 @@ void EntityMesh::update(float dt) {
 
 };
 //collider
-void Collider::updateRenderCollider(EntityMesh* playerMesh, Camera* camera) {
+void Collider::updateCollider(EntityMesh* playerMesh, Camera* camera) {
 	if (!playerMesh->anim == NULL) {
 		Matrix44 neckLocalMatrix = playerMesh->anim->skeleton.getBoneMatrix(this->name, false);
 		Matrix44 localToWorldMatrix = neckLocalMatrix * playerMesh->model;
@@ -159,9 +159,11 @@ void Collider::updateRenderCollider(EntityMesh* playerMesh, Camera* camera) {
 	}
 }
 //sPlayer functions 
-sPlayer::sPlayer(const char* meshPath, const char* texPath) {
+sPlayer::sPlayer(const char* meshPath, const char* texPath, Vector3 spawn) {
 	initAnims();
 	initColliders();
+	this->spawnPos = spawn;
+	this->pos = spawn;
 	this->character_mesh = new EntityMesh(GL_TRIANGLES, meshPath, texPath, "data/shaders/skinning.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
 	this->character_mesh->anim = this->anims[0];
 
@@ -317,7 +319,7 @@ void sPlayer::kickCollision(std::vector<sPlayer*> enemies) {
 		EntityMesh* enemyEntity = currentEnemy->character_mesh;
 
 		//testeo collision
-		for (size_t i = 0; i < this->colliders.size() / 2; i++)
+		for (size_t i = 2; i < this->colliders.size(); i++)
 		{
 			Collider* currentCollider = this->colliders[i];
 			Vector3 coll_center = currentCollider->colliderMesh->model.getTranslation();
@@ -373,14 +375,14 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	//punch 
 	if (Input::wasKeyPressed(punchKey) && this->animTimer <= 0.2f) {
 		this->side = this->side * -1;
-		ChangeAnim(3, this->anims[3]->duration / 1.8 - 0.05);
+		this->ChangeAnim(3, this->anims[3]->duration / 1.8 - 0.05);
 		scene->audio->PlayGameSound(0,1);
 	}
 
 	//kick
 	if (Input::wasKeyPressed(kickKey) && this->animTimer <= 0.2f) {
 		this->side = this->side * -1;
-		ChangeAnim(4, this->anims[4]->duration);
+		this->ChangeAnim(4, this->anims[4]->duration);
 	}
 
 	if (this->animTimer <= 0.0f) ChangeAnim(0, NULL);
@@ -411,12 +413,12 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	if (Input::isKeyPressed(upKey) && this->ctr != 5)
 	{
 		playerVel = playerVel + (forward * this->playerVel);
-		ChangeAnim(1, NULL);
+		this->ChangeAnim(1, NULL);
 	}
 	if (Input::isKeyPressed(downKey) && this->ctr != 5)
 	{
 		playerVel = playerVel - (forward * this->playerVel);
-		ChangeAnim(1, NULL);
+		this->ChangeAnim(1, NULL);
 	}
 	if (Input::isKeyPressed(rightRotKey)) this->yaw += rotSpeed;
 	if (Input::isKeyPressed(leftRotKey)) this->yaw -= rotSpeed;
@@ -427,7 +429,7 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	//jump
 	if (Input::wasKeyPressed(jumpKey) && this->pos.y <= 0.0f) {
 		this->jumpLock = 0.15f;
-		ChangeAnim(6, 0.8f);
+		this->ChangeAnim(6, 0.8f);
 	}
 
 	if (this->jumpLock != 0.0f) {
@@ -456,7 +458,7 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	if (Input::wasKeyPressed(dashKey)) {
 		playerVel[0] -= sumX;
 		playerVel[2] -= sumZ;
-		ChangeAnim(5, 0.25f);
+		this->ChangeAnim(5, 0.25f);
 	}
 
 	nextPos = this->pos + playerVel;
@@ -476,7 +478,6 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 
 void sPlayer::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, sPlayer* player, float seconds_elapsed) {
 
-	this->updateInvulnerabilityTime(seconds_elapsed);
 
 	Matrix44 npcModel = this->getModel();
 	Vector3 side = npcModel.rotateVector(Vector3(1, 0, 0)).normalize();
@@ -494,10 +495,16 @@ void sPlayer::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*
 	}
 
 	if (dist > 2.0f) {
-
+		this->ChangeAnim(1, NULL);
 		Vector3 nextPos = this->pos + (forward * this->playerVel * seconds_elapsed);
 		nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed);
 		this->pos = nextPos;
+
+	}
+	else {
+		//como se puede cambiar el side aqui?
+		//como se puede parar una vez esta en dist > 2.0f?
+		this->ChangeAnim(3, this->anims[3]->duration / 1.8 - 0.05);
 
 	}
 }
@@ -512,7 +519,7 @@ Animation* sPlayer::renderAnim() {
 	Matrix44 playerModel = this->getModel();
 
 	playerModel.scale(this->side * 0.015, 0.015, 0.015);
-	playerModel.rotate(180 * DEG2RAD, Vector3(0, 1, 0));
+	playerModel.rotate(180 * DEG2RAD, Vector3(0, 1, 0)); //quitar si se gira la mesh
 	this->character_mesh->model = playerModel;
 
 	//animations 
