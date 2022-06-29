@@ -45,6 +45,7 @@ public:
 
 	sPlayer* player = NULL;
 	std::vector<sPlayer*> enemies;
+	std::vector<sPlayer*> enemies_defeated;
 	Camera* cam = NULL;
 
 	Texture* quadTex;

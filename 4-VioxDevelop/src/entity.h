@@ -81,14 +81,13 @@ struct sPlayer {
 	//float pitch = 0.0f; //para el first person
 	//colliders
 	std::vector<Collider*> colliders;
-	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision)
+	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision y colliders)
 	int max_health = 10;
 	int health = 10;
 	EntityMesh* character_mesh = NULL;
 	Vector2 dash_direction;
-	float jumpLock;
-	float max_invulnerability_time = 2;
-	float invulnerability_time;
+	float max_invulnerability_time = 1.5f;
+	float invulnerability_time = 0.0f;
 	//anims
 	std::vector<Animation*> anims;
 	int ctr = 0;

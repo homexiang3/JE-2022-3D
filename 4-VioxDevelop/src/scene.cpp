@@ -261,3 +261,13 @@ void renderGUI(float x, float y, float w, float h, Texture* tex, bool flipYV) {
 	//disable shader
 	shader->disable();
 }
+
+void Scene::saveProgress()
+{
+
+}
+
+void Scene::loadProgress()
+{
+
+}

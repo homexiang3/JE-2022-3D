@@ -536,12 +536,22 @@ void PlayLevel::resetLevel() {
 	this->player->health = this->player->max_health;
 	updateHealthBar(-78, playerHP_quad, this->player);
 	this->player->yaw = 0;
+	//mover a los derrotados de nuevo al array de vivos
+	for (size_t i = 0; i < this->enemies_defeated.size(); i++)
+	{
+		sPlayer* enemy = enemies_defeated[i];
+		this->enemies.push_back(enemy);
+	}
+	//limpiar array de derrotados
+	this->enemies_defeated.clear();
+	//setear de nuevo los vivos
 	for (size_t i = 0; i < this->enemies.size(); i++)
 	{
 		sPlayer* enemy = enemies[i];
 		enemy->pos = enemy->spawnPos;
 		enemy->health = enemy->max_health;
 		enemy->yaw = 0;
+		enemy->invulnerability_time = 0.0f;
 
 	}
 }
@@ -555,78 +565,124 @@ void PlayLevel::Render() {
 	Matrix44 playerModel = this->player->getModel();
 	SetupCam(playerModel, this->cam);
 
-	
-	this->player->character_mesh->anim = this->player->renderAnim(); //cojo la anim directamente desde la mesh para no tener que ir pasandola
+	if (this->player->health > 0) {
 
-	//blendSkeleton(&scene->player.anims[0]->skeleton, &scene->player.anims[scene->player.ctr]->skeleton, 0.3f, &FinalAnim->skeleton);
 
-	//float velFactor = scene->player.playerVel
+		this->player->character_mesh->anim = this->player->renderAnim(); //cojo la anim directamente desde la mesh para no tener que ir pasandola
 
-	this->cam->enable();
-	//Render
-	//scene->skyMesh->model.setTranslation(camera->eye.x, camera->eye.y - 20.0f, camera->eye.z); solo usarlo si el mapa fuera muy grande
-	glDisable(GL_DEPTH_TEST);
-	this->skyMesh->render(this->cam);//cielo
-	glEnable(GL_DEPTH_TEST);
+		//blendSkeleton(&scene->player.anims[0]->skeleton, &scene->player.anims[scene->player.ctr]->skeleton, 0.3f, &FinalAnim->skeleton);
 
-	this->groundMesh->render(this->cam); //suelo
+		//float velFactor = scene->player.playerVel
 
-	this->player->character_mesh->render(this->cam);//player
-	for (size_t i = 0; i < this->player->colliders.size(); i++)
-	{
-		EntityMesh* playerMesh = this->player->character_mesh;
-		this->player->colliders[i]->updateCollider(playerMesh, this->cam);
+		this->cam->enable();
+		//Render
+		//scene->skyMesh->model.setTranslation(camera->eye.x, camera->eye.y - 20.0f, camera->eye.z); solo usarlo si el mapa fuera muy grande
+		glDisable(GL_DEPTH_TEST);
+		this->skyMesh->render(this->cam);//cielo
+		glEnable(GL_DEPTH_TEST);
+
+		this->groundMesh->render(this->cam); //suelo
+
+		this->player->character_mesh->render(this->cam);//player
+		for (size_t i = 0; i < this->player->colliders.size(); i++)
+		{
+			EntityMesh* playerMesh = this->player->character_mesh;
+			this->player->colliders[i]->updateCollider(playerMesh, this->cam);
+		}
+
+		for (size_t i = 0; i < this->entities.size(); i++)//entities added
+		{
+			EntityMesh* entity = this->entities[i];
+			entity->render(this->cam);
+		}
+
+		for (size_t i = 0; i < this->enemies.size(); i++)//enemies
+		{
+			sPlayer* enemy = this->enemies[i];
+
+			if (enemy->health <= 0) {
+				this->enemies_defeated.push_back(enemy);
+				this->enemies.erase(this->enemies.begin() + i);
+			}
+
+			enemy->character_mesh->anim = enemy->renderAnim();
+
+			for (size_t i = 0; i < enemy->colliders.size(); i++)
+			{
+				EntityMesh* playerMesh = enemy->character_mesh;
+				enemy->colliders[i]->updateCollider(playerMesh, this->cam);
+			}
+
+			enemy->character_mesh->render(this->cam);
+
+		}
+
+		RenderMinimap(window_width, this->player, this->enemies, this->groundMesh, this->entities);
+
+		//hp
+		drawHP(this->playerHP_quad, this->quadTex, Matrix44(), this->cam2D);
+		drawText(2.8 * window_width / 800, 22 * window_height / 600, "HP", Vector3(1, 1, 1), window_width / 400);
 	}
-
-	for (size_t i = 0; i < this->entities.size(); i++)//entities added
-	{
-		EntityMesh* entity = this->entities[i];
-		entity->render(this->cam);
+	else {
+		drawText(window_width - window_width * 0.88, window_height - window_height * 0.7, "YOU DIED", Vector3(1, 1, 1), window_width / 60);
+		if (int(Game::instance->time) % 2 == 0) {
+			drawText(window_width - window_width * 0.94, window_height - window_height * 0.3, "PRESS C TO CONTINUE OR X TO RETURN MENU", Vector3(1, 1, 1), window_width / 250);
+		}
 	}
-
-	for (size_t i = 0; i < this->enemies.size(); i++)//enemies
-	{
-		sPlayer* enemy = this->enemies[i];
-		enemy->character_mesh->anim = enemy->renderAnim();
-
-		enemy->character_mesh->render(this->cam);
-
-	}
-
-	RenderMinimap(window_width, this->player, this->enemies, this->groundMesh, this->entities);
-
-	//hp
-	drawHP(this->playerHP_quad, this->quadTex, Matrix44(), this->cam2D);
-	drawText(2.8 * window_width / 800, 22 * window_height / 600, "HP", Vector3(1, 1, 1), window_width / 400);
-
 }
 
 void PlayLevel::Update(float seconds_elapsed) {
-	
-	this->player->playerMovement(this->enemies, this->entities, seconds_elapsed, false);
-	this->player->updateInvulnerabilityTime(seconds_elapsed);
-	for (size_t i = 0; i < this->enemies.size(); i++)//enemies
-	{
-
-		sPlayer* enemy = this->enemies[i];
-		enemy->updateInvulnerabilityTime(seconds_elapsed);
-		//borrarse a el mismo de la lista de enemigos a colisionar
-		std::vector<sPlayer*> e = this->enemies;
-		e.erase(e.begin() + i);
-		enemy->npcMovement(e, this->entities, this->player, seconds_elapsed);
-	}
-
-	//debug levels
 	Scene* s = Game::instance->scene;
+
+	if (this->player->health > 0) {
+		this->player->playerMovement(this->enemies, this->entities, seconds_elapsed, false);
+		this->player->updateInvulnerabilityTime(seconds_elapsed);
+		for (size_t i = 0; i < this->enemies.size(); i++)//enemies
+		{
+
+			sPlayer* enemy = this->enemies[i];
+			enemy->updateInvulnerabilityTime(seconds_elapsed);
+			//borrarse a el mismo de la lista de enemigos a colisionar
+			std::vector<sPlayer*> e = this->enemies;
+			e.erase(e.begin() + i);
+			enemy->npcMovement(e, this->entities, this->player, seconds_elapsed);
+		}
+
+		//update level when no enemies left
+		if (this->enemies.size() <= 0) {
+			int nextLevel = (s->currentLevel + 1) % s->levels.size();
+			this->resetLevel();
+			if (s->currentLevel + 1 < s->levels.size()) {
+				s->currentLevel = nextLevel;
+			}
+			else {
+
+				SetStage(STAGE_ID::END, Game::instance->scene->currentStage);
+			}
+		}
+	}
+	else {
+		if (Input::wasKeyPressed(SDL_SCANCODE_C)) {
+			this->resetLevel();
+		}
+		if (Input::wasKeyPressed(SDL_SCANCODE_X)) {
+			this->resetLevel();
+			SetStage(STAGE_ID::INTRO, Game::instance->scene->currentStage);
+		}
+	}
+	//debug levels
 	if (Input::wasKeyPressed(SDL_SCANCODE_RIGHT)) { 
 		int nextLevel = (s->currentLevel + 1) % s->levels.size();
+		this->resetLevel();
 		s->currentLevel = nextLevel;
-		std::cout << "going to level " << s->currentLevel << std::endl; }
-
+		std::cout << "going to level " << s->currentLevel << std::endl; 
+	}
+	//debug HP
 	if (Input::wasKeyPressed(SDL_SCANCODE_T)) {
 		this->player->health --;
 		updateHealthBar(-78, this->playerHP_quad, this->player);
 	}
+	//debug resetLevel
 	if (Input::wasKeyPressed(SDL_SCANCODE_P)) {
 		this->resetLevel();
 	}

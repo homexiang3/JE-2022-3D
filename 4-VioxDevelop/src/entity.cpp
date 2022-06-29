@@ -152,7 +152,7 @@ void Collider::updateCollider(EntityMesh* playerMesh, Camera* camera) {
 		Matrix44 localToWorldMatrix = neckLocalMatrix * playerMesh->model;
 		localToWorldMatrix.scale(0.1, 0.1, 0.1);
 		this->colliderMesh->model = localToWorldMatrix;
-		this->colliderMesh->render(camera);
+		//this->colliderMesh->render(camera); //solo activar para debug
 	}
 	else {
 		std::cout << "Player mesh didn't have animation" << std::endl;
@@ -345,7 +345,6 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	float walk_speed = 10.0f * seconds_elapsed;
 	float run_speed = 20.0f * seconds_elapsed;
 
-	this->jumpLock = max(0.0f, this->jumpLock - seconds_elapsed);
 	this->animTimer = max(0.0f, this->animTimer - seconds_elapsed);
 
 	//definir teclas para multi o solo
@@ -357,7 +356,6 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	int punchKey = SDL_SCANCODE_Z;
 	int kickKey = SDL_SCANCODE_V;
 	int runKey = SDL_SCANCODE_LSHIFT;
-	int jumpKey = SDL_SCANCODE_C;
 	int dashKey = SDL_SCANCODE_X;
 
 	if (multi) {
@@ -368,7 +366,6 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 		punchKey = SDL_SCANCODE_M;
 		kickKey = SDL_SCANCODE_N;
 		runKey = SDL_SCANCODE_RSHIFT;
-		jumpKey = SDL_SCANCODE_L;
 		dashKey = SDL_SCANCODE_K;
 	}
 
@@ -426,20 +423,6 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	
 	if (Input::isKeyPressed(runKey)) ChangeAnim(2, NULL);// run anim
 
-	//jump
-	if (Input::wasKeyPressed(jumpKey) && this->pos.y <= 0.0f) {
-		this->jumpLock = 0.15f;
-		this->ChangeAnim(6, 0.8f);
-	}
-
-	if (this->jumpLock != 0.0f) {
-		playerVel[1] += 0.1f;
-	}
-
-	if (this->pos.y > 0.0f) {
-		playerVel[1] -= seconds_elapsed * 3;
-	}
-
 	Vector3 nextPos = this->pos + playerVel;
 
 	//dash
@@ -466,10 +449,10 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed);
 
 	//test attack collisions
-	if (this->ctr == 3) { //kick
+	if (this->ctr == 3) { //punch
 		this->punchCollision(enemies);
 	}
-	if (this->ctr == 4) { //punch
+	if (this->ctr == 4) { //kick
 		this->kickCollision(enemies);
 	}
 
@@ -491,7 +474,7 @@ void sPlayer::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*
 	float forwardDot = forward.dot(toTarget);
 
 	if (forwardDot < 0.98f) {
-		this->yaw += 90.0f * sign(sideDot) * seconds_elapsed;
+		this->yaw += 200.0f * sign(sideDot) * seconds_elapsed;
 	}
 
 	if (dist > 2.0f) {
@@ -505,7 +488,16 @@ void sPlayer::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*
 		//como se puede cambiar el side aqui?
 		//como se puede parar una vez esta en dist > 2.0f?
 		this->ChangeAnim(3, this->anims[3]->duration / 1.8 - 0.05);
-
+		std::vector<sPlayer*> playerEnemy;
+		playerEnemy.push_back(player);
+		if (this->ctr == 3) { //punch
+			this->punchCollision(playerEnemy);
+		}
+		/*
+		if (this->ctr == 4) { //kick
+			this->kickCollision(playerEnemy);
+		}
+		*/
 	}
 }
 void sPlayer::ChangeAnim( int i, float time)
