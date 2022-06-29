@@ -62,10 +62,16 @@ public:
 	void render( Camera* camera );
 	void update(float dt);
 };
+//estructura para guardar las zonas de collision
+struct Collider {
+	const char* name = NULL;
+	EntityMesh* colliderMesh = NULL;
 
+	void updateCollider(EntityMesh* playerMesh, Camera* camera);
+};
 //estructura para el player
 struct sPlayer {
-	sPlayer(const char* meshPath, const char* texPath);
+	sPlayer(const char* meshPath, const char* texPath, Vector3 spawn);
 
 	Vector3 spawnPos;
 	Vector3 pos;
@@ -73,17 +79,21 @@ struct sPlayer {
 	float playerVel;
 	float yaw = 0.0f;
 	//float pitch = 0.0f; //para el first person
-	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision)
-	int health;
-	EntityMesh* character_mesh;
+	//colliders
+	std::vector<Collider*> colliders;
+	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision y colliders)
+	int max_health = 10;
+	int health = 10;
+	EntityMesh* character_mesh = NULL;
 	Vector2 dash_direction;
-	float jumpLock;
-
+	float max_invulnerability_time = 1.5f;
+	float invulnerability_time = 0.0f;
 	//anims
 	std::vector<Animation*> anims;
 	int ctr = 0;
 	float animTimer = 0.0f;
 	int side = -1;
+
 
 	Animation* idle = NULL;
 	Animation* walk = NULL;
@@ -96,57 +106,90 @@ struct sPlayer {
 
 	Matrix44 getModel();
 	void initAnims();
+	void initColliders();
 	void playerMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, float seconds_elapsed, bool multi);
 	Vector3 playerCollision(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed);
 	void npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities,sPlayer* player, float seconds_elapsed);
 	void ChangeAnim(int i, float time);
 	Animation* renderAnim();
-
+	void punchCollision(std::vector<sPlayer*> enemies);
+	void kickCollision(std::vector<sPlayer*> enemies);
+	void updateInvulnerabilityTime(float seconds_elapsed);
 	
 };
 
-/*otros ejemplos
+struct sBoss {
+	sBoss(const char* meshPath, const char* texPath);
 
-class EntityCamera : public Entity {};
-class EntityLight : public Entity {};
-class EntitySound : public Entity {};
-class EntityTrigger : public Entity {};
+	Vector3 spawnPos;
+	Vector3 pos;
+	//Vector3 vel;
+	float playerVel = 4.0f;
+	float yaw = 0.0f;
+	//float pitch = 0.0f; //para el first person
+	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision)
+	int health = 10;
+	EntityMesh* character_mesh;
 
-class Airplane : public Entity
-{
-	 public:
-	static std::vector<Airplane*> planes;
+	//anims
+	std::vector<Animation*> anims;
+	int ctr = 1;
+	float animTimer = 0.0f;
+	int side = 1;
 
-	char type;
+	//weapons
+	EntityMesh* shuriken_mesh;
 
-	Airplane() {
-planes.push_back(this);
-}
+	Animation* idle = NULL;
+	Animation* rest = NULL;
+	Animation* run = NULL;
 
+	Animation* die = NULL;
+	Animation* charge = NULL;
 
-~Airplane() {
-auto it = planes.find(this);
-planes.remove(it);
-}
+	Animation* attackRect = NULL;
+	Animation* attackCone = NULL;
+	Animation* attackCircle = NULL;
 
-static void renderAll();
-static void updateAll( float dt );
+	Animation* shurikenSpawn = NULL;
+
+	bool animShurikens = false;
+
+	float testPositioner = 1.0f;
+	float testPositioner2 = 1.0f;
+	float testPositioner3 = 1.0f;
+	bool xd = true;
+
+	float attackTimer = 0.0f; //timer to start attack
+	int state = 0; //flag for boss state: 0 for free , 1 for attacking 
+	int attackNumb = 0;
+	Vector3 attackTo;
+
+	//attacks 
+	std::vector<EntityMesh*> planes;
+	int attackCounter = 0;//every 3 atatcks the boss will rest
+
+	//destroyed shurikens
+	bool shurkikens[10] = { false,false,false,false,false,false,false,false,false, false };
+
+	//to comunnicate hits to the level class ? 
+	bool hit = false;
+
+	//player invencibility timer
+	float invencibility = 0.0f;
+
+	Matrix44 getModel();
+	void initAnims();
+	//void playerMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, float seconds_elapsed, bool multi);
+	//Vector3 playerCollision(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed);
+	void npcMovement(sPlayer* player, float seconds_elapsed);
+	void ChangeAnim(int i, float time);
+	Animation* renderAnim();
+
+	void shurikenAttack(Camera* cam, Vector3 playerpos);
+
+	void katanaRender(Camera* cam);
+
+	void Attack(Camera* cam, Vector3 playerpos);
+
 };
-
-//guardar informacion de cada "material" dentro de un vector
-
-class PropType {
-	int index;
-	Mesh* mesh;
-	Texture* texture;
-	//...
-};
-
-//array of types (max 32 types)
-PropType proptypes[32];
-class Prop {
-	public:
-		int type;	//index to the array
-		Matrix44 model;
-};
-*/

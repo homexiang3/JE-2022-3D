@@ -100,7 +100,7 @@ void Game::update(double seconds_elapsed)
 	{
 		int nextStageIndex = (((int)scene->currentStage) + 1) % scene->stages.size();
 		SetStage((STAGE_ID)nextStageIndex, scene->currentStage);
-
+		std::cout << " + Going to stage " << nextStageIndex << std::endl;
 	} 
 
 	//mouse input to rotate the cam
