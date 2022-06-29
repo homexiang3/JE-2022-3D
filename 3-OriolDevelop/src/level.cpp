@@ -524,6 +524,12 @@ PlayLevel::PlayLevel(const char* map, const char* enemiesPath) {
 	//player hp
 	this->playerHP_quad.createQuad(-78, 90, 30, 5,true);
 	this->quadTex = Texture::Get("data/menu/healthbar.tga");
+
+	//boss 
+	this->boss = new sBoss("data/boss/boss.mesh", "data/minichar_tex.png");
+	this->entities.push_back(this->boss->character_mesh);
+	//this->entities.push_back(this->boss->shuriken_mesh);
+	this->player->pos = Vector3(2, 0, 2);
 	
 }
 
@@ -582,6 +588,8 @@ void PlayLevel::Render() {
 	
 	this->player->character_mesh->anim = this->player->renderAnim(); //cojo la anim directamente desde la mesh para no tener que ir pasandola
 
+	this->boss->character_mesh->anim = this->boss->renderAnim();//lo mismo para el boss
+
 	//blendSkeleton(&scene->player.anims[0]->skeleton, &scene->player.anims[scene->player.ctr]->skeleton, 0.3f, &FinalAnim->skeleton);
 
 	//float velFactor = scene->player.playerVel
@@ -596,6 +604,23 @@ void PlayLevel::Render() {
 	this->groundMesh->render(this->cam); //suelo
 
 	this->player->character_mesh->render(this->cam);//player
+
+
+	this->boss->character_mesh->render(this->cam);//boss
+	
+
+	this->boss->Attack(this->cam, this->player->pos);
+
+	if (this->boss->hit) {
+		this->boss->hit = false;
+		if (this->player->invencibility <= 0.0f) {
+			this->player->health--;
+			updateHealthBar();
+			this->player->invencibility = 3.6f;
+			std::cout << "collison" << std::endl;
+		}
+	}
+	
 
 	for (size_t i = 0; i < this->entities.size(); i++)//entities added
 	{
@@ -612,7 +637,7 @@ void PlayLevel::Render() {
 		playerModel.rotate(180 * DEG2RAD, Vector3(0,1,0));
 		enemies[i]->character_mesh->model = enemyModel; //si se carga algo diferente al skelly va mal
 
-		enemy->character_mesh->render(this->cam);
+		//enemy->character_mesh->render(this->cam);
 	}
 
 	RenderMinimap(window_width, this->player, this->enemies, this->groundMesh, this->entities);
@@ -635,6 +660,8 @@ void PlayLevel::Update(float seconds_elapsed) {
 		enemy->npcMovement(e, this->entities, this->player, seconds_elapsed);
 	}
 
+	this->boss->npcMovement(this->player, seconds_elapsed);
+
 	//debug levels
 	Scene* s = Game::instance->scene;
 	if (Input::wasKeyPressed(SDL_SCANCODE_RIGHT)) { 
@@ -644,6 +671,39 @@ void PlayLevel::Update(float seconds_elapsed) {
 
 	if (Input::wasKeyPressed(SDL_SCANCODE_T)) {
 		this->player->health --;
+		this->boss->testPositioner++;
+		updateHealthBar();
+	}
+
+	if (Input::wasKeyPressed(SDL_SCANCODE_Y)) {
+		this->player->health--;
+		this->boss->testPositioner--;
+		updateHealthBar();
+	}
+	if (Input::wasKeyPressed(SDL_SCANCODE_U)) {
+		this->player->health--;
+		this->boss->health--;
+		updateHealthBar();
+	}
+
+	if (Input::isKeyPressed(SDL_SCANCODE_I)) {
+		this->player->health--;
+		this->boss->testPositioner2--;
+		updateHealthBar();
+	}
+	if (Input::isKeyPressed(SDL_SCANCODE_O)) {
+		this->player->health--;
+		this->boss->testPositioner3++;
+		updateHealthBar();
+	}
+	if (Input::isKeyPressed(SDL_SCANCODE_P)) {
+		this->player->health--;
+		this->boss->testPositioner3--;
+		updateHealthBar();
+	}
+	if (Input::isKeyPressed(SDL_SCANCODE_M)) {
+		this->player->health--;
+		this->boss->xd= !this->boss->xd;
 		updateHealthBar();
 	}
 

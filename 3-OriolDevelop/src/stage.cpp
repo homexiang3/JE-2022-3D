@@ -78,7 +78,7 @@ void IntroStage::initQuads()
 	float y = window_height / 3;
 	float w = 100 * window_width / 800;
 	float h = 75 * window_height / 600;
-	this->menuPtr_mesh.createQuad(x, y, w, h, true);
+	this->menuPtr_mesh.createQuad(x, y, w, h, true); 
 }
 
 void IntroStage::renderQuad(Mesh quad, Texture* tex, Matrix44 anim = Matrix44())

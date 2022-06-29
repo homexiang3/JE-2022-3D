@@ -50,11 +50,16 @@ public:
 	Texture* quadTex;
 	Mesh playerHP_quad;
 	Camera cam2D;
+
+	// boss
+	sBoss* boss = NULL;
+
 	void Render();
 	void Update(float seconds_elapsed);
 
 	void drawHP(Mesh quad, Texture* tex, Matrix44 anim = Matrix44());
 	void updateHealthBar();
+
 };
 
 class MultiLevel : public Level{

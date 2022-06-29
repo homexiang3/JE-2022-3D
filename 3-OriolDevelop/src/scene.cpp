@@ -215,7 +215,7 @@ void ImportEnemies(const char* path, std::vector<sPlayer*>& enemies) {
 		int health;
 		ss >> health;
 		//create entity
-		sPlayer* enemy = new sPlayer(meshPath.c_str(), texPath.c_str());
+		sPlayer* enemy = new sPlayer("data/boss/boss.mesh", texPath.c_str());
 		enemy->playerVel = speed;
 		enemy->health = health;
 		//definir la pos random?

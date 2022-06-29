@@ -56,10 +56,10 @@ public:
 	float tiling;
 
 	//anims
-	Animation* anim = NULL;
+	Animation* anim;
 
 	//methods overwritten 
-	void render( Camera* camera );
+	void render( Camera* camera);
 	void update(float dt);
 };
 
@@ -85,6 +85,9 @@ struct sPlayer {
 	float animTimer = 0.0f;
 	int side = -1;
 
+	//invencibility timer
+	float invencibility = 0.0f;
+
 	Animation* idle = NULL;
 	Animation* walk = NULL;
 	Animation* run = NULL;
@@ -104,6 +107,86 @@ struct sPlayer {
 
 	
 };
+
+
+struct sBoss {
+	sBoss(const char* meshPath, const char* texPath);
+
+	Vector3 spawnPos;
+	Vector3 pos;
+	//Vector3 vel;
+	float playerVel =4.0f;
+	float yaw = 0.0f;
+	//float pitch = 0.0f; //para el first person
+	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision)
+	int health = 10;
+	EntityMesh* character_mesh;
+	
+	//anims
+	std::vector<Animation*> anims;
+	int ctr = 1;
+	float animTimer = 0.0f;
+	int side = 1;
+
+	//weapons
+	EntityMesh* shuriken_mesh;
+
+	Animation* idle = NULL;
+	Animation* rest = NULL;
+	Animation* run = NULL;
+
+	Animation* die = NULL;
+	Animation* charge = NULL;
+
+	Animation* attackRect = NULL;
+	Animation* attackCone = NULL;
+	Animation* attackCircle = NULL;
+
+	Animation* shurikenSpawn = NULL;
+
+	bool animShurikens = false;
+
+	float testPositioner = 1.0f;
+	float testPositioner2 = 1.0f;
+	float testPositioner3 = 1.0f;
+	bool xd = true;
+
+	float attackTimer = 0.0f; //timer to start attack
+	int state = 0; //flag for boss state: 0 for free , 1 for attacking 
+	int attackNumb = 0;
+	Vector3 attackTo;
+
+	//attacks 
+	std::vector<EntityMesh*> planes;
+	int attackCounter = 0;//every 3 atatcks the boss will rest
+
+	//destroyed shurikens
+	bool shurkikens[10] = { false,false,false,false,false,false,false,false,false, false };
+
+	//to comunnicate hits to the level class ? 
+	bool hit = false;
+
+	//player invencibility timer
+	float invencibility = 0.0f;
+
+	Matrix44 getModel();
+	void initAnims();
+	//void playerMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, float seconds_elapsed, bool multi);
+	//Vector3 playerCollision(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed);
+	void npcMovement( sPlayer* player, float seconds_elapsed);
+	void ChangeAnim(int i, float time);
+	Animation* renderAnim();
+
+	void shurikenAttack(Camera* cam, Vector3 playerpos);
+
+	void katanaRender(Camera* cam);
+
+	void Attack(Camera* cam, Vector3 playerpos);
+
+};
+
+
+
 
 /*otros ejemplos
 
