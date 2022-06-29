@@ -45,20 +45,17 @@ public:
 
 	sPlayer* player = NULL;
 	std::vector<sPlayer*> enemies;
+	std::vector<sPlayer*> enemies_defeated;
 	Camera* cam = NULL;
+	// boss
+	sBoss* boss = NULL;
 
 	Texture* quadTex;
 	Mesh playerHP_quad;
 	Camera cam2D;
-
-	// boss
-	sBoss* boss = NULL;
-
 	void Render();
 	void Update(float seconds_elapsed);
-
-	void drawHP(Mesh quad, Texture* tex, Matrix44 anim = Matrix44());
-	void updateHealthBar();
+	void resetLevel();
 
 };
 
@@ -74,10 +71,9 @@ public:
 	void Render();
 	void Update(float seconds_elapsed);
 	void RenderWorld(Camera* cam);
+	void resetLevel();
 
 	//hp bars
-	void drawHP(Mesh quad, Texture* tex, Matrix44 anim);
-	void updateHealthBar();
 	Texture* quadTex;
 	Mesh player1HP_quad;
 	Mesh player2HP_quad;
@@ -102,3 +98,5 @@ public:
 void InitLevels(std::vector<PlayLevel*>& levels, EditorLevel*& editor, MultiLevel*& multi);
 void RenderMinimap(int widthStart, sPlayer*& player, std::vector<sPlayer*>& enemies, EntityMesh* groundMesh, std::vector<EntityMesh*>& entities);
 void SetupCam(Matrix44& playerModel, Camera* cam);
+void drawHP(Mesh quad, Texture* tex, Matrix44 anim, Camera cam2D);
+void updateHealthBar(float centerStart, Mesh& playerHP_quad, sPlayer* player);

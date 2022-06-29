@@ -78,7 +78,7 @@ void IntroStage::initQuads()
 	float y = window_height / 3;
 	float w = 100 * window_width / 800;
 	float h = 75 * window_height / 600;
-	this->menuPtr_mesh.createQuad(x, y, w, h, true); 
+	this->menuPtr_mesh.createQuad(x, y, w, h, true);
 }
 
 void IntroStage::renderQuad(Mesh quad, Texture* tex, Matrix44 anim = Matrix44())
@@ -137,8 +137,14 @@ void IntroStage::Render() {
 void IntroStage::Update(float seconds_elapsed) {
 	Scene* scene = Game::instance->scene;
 
+	if (!scene->music_Playing) { 
+		scene->audio->PlayGameSound(0, 2); 
+		scene->music_Playing == true;
+	}
+
 	//std::cout << this->menuPointer << std::endl;
 	if (Input::wasKeyPressed(SDL_SCANCODE_S)) {
+		
 		scene->audio->PlayGameSound(1,2);
 		this->menuPointer = (this->menuPointer +1) % 5;
 		movePtr();
@@ -151,10 +157,10 @@ void IntroStage::Update(float seconds_elapsed) {
 	}
 
 	if (Input::wasKeyPressed(SDL_SCANCODE_X)) {
+		scene->audio->ResetAudio();
 		scene->audio->PlayGameSound(2, 2);
 		if (this->menuPointer == 4) Game::instance->must_exit = true;
 		SetStage((STAGE_ID)(this->menuPointer+1), Game::instance->scene->currentStage );
-		
 	}
 }
 

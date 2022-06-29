@@ -24,6 +24,7 @@ public:
 	//initial function se usa de prueba
 	void PlayGameSound(int pos, int where);
 	void LoadSample(const char* fileName, int vector);
+	void ResetAudio();
 	
 };
 

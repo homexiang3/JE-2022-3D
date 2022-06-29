@@ -56,16 +56,22 @@ public:
 	float tiling;
 
 	//anims
-	Animation* anim;
+	Animation* anim = NULL;
 
 	//methods overwritten 
-	void render( Camera* camera);
+	void render( Camera* camera );
 	void update(float dt);
 };
+//estructura para guardar las zonas de collision
+struct Collider {
+	const char* name = NULL;
+	EntityMesh* colliderMesh = NULL;
 
+	void updateCollider(EntityMesh* playerMesh, Camera* camera);
+};
 //estructura para el player
 struct sPlayer {
-	sPlayer(const char* meshPath, const char* texPath);
+	sPlayer(const char* meshPath, const char* texPath, Vector3 spawn);
 
 	Vector3 spawnPos;
 	Vector3 pos;
@@ -73,20 +79,25 @@ struct sPlayer {
 	float playerVel;
 	float yaw = 0.0f;
 	//float pitch = 0.0f; //para el first person
-	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision)
-	int health =10;
-	EntityMesh* character_mesh;
+	//colliders
+	std::vector<Collider*> colliders;
+	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision y colliders)
+	int max_health = 10;
+	int health = 10;
+	EntityMesh* character_mesh = NULL;
 	Vector2 dash_direction;
-	float jumpLock;
-
+	float max_invulnerability_time = 1.5f;
+	float invulnerability_time = 0.0f;
 	//anims
 	std::vector<Animation*> anims;
 	int ctr = 0;
 	float animTimer = 0.0f;
-	int side = -1;
+	int side = 1;
 
-	//invencibility timer
-	float invencibility = 0.0f;
+	//escudo
+	EntityMesh* shield = NULL;
+	bool Protected = false;
+	//bool shield = true;
 
 	Animation* idle = NULL;
 	Animation* walk = NULL;
@@ -96,18 +107,21 @@ struct sPlayer {
 	Animation* kick = NULL;
 	Animation* dash = NULL;
 	Animation* jump = NULL;
+	Animation* protect = NULL;
 
 	Matrix44 getModel();
 	void initAnims();
+	void initColliders();
 	void playerMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, float seconds_elapsed, bool multi);
 	Vector3 playerCollision(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed);
 	void npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities,sPlayer* player, float seconds_elapsed);
 	void ChangeAnim(int i, float time);
 	Animation* renderAnim();
-
+	void punchCollision(std::vector<sPlayer*> enemies);
+	void kickCollision(std::vector<sPlayer*> enemies);
+	void updateInvulnerabilityTime(float seconds_elapsed);
 	
 };
-
 
 struct sBoss {
 	sBoss(const char* meshPath, const char* texPath);
@@ -115,13 +129,13 @@ struct sBoss {
 	Vector3 spawnPos;
 	Vector3 pos;
 	//Vector3 vel;
-	float playerVel =4.0f;
+	float playerVel = 4.0f;
 	float yaw = 0.0f;
 	//float pitch = 0.0f; //para el first person
 	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision)
 	int health = 10;
 	EntityMesh* character_mesh;
-	
+
 	//anims
 	std::vector<Animation*> anims;
 	int ctr = 1;
@@ -173,7 +187,7 @@ struct sBoss {
 	void initAnims();
 	//void playerMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, float seconds_elapsed, bool multi);
 	//Vector3 playerCollision(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed);
-	void npcMovement( sPlayer* player, float seconds_elapsed);
+	void npcMovement(sPlayer* player, float seconds_elapsed);
 	void ChangeAnim(int i, float time);
 	Animation* renderAnim();
 
@@ -184,52 +198,3 @@ struct sBoss {
 	void Attack(Camera* cam, Vector3 playerpos);
 
 };
-
-
-
-
-/*otros ejemplos
-
-class EntityCamera : public Entity {};
-class EntityLight : public Entity {};
-class EntitySound : public Entity {};
-class EntityTrigger : public Entity {};
-
-class Airplane : public Entity
-{
-	 public:
-	static std::vector<Airplane*> planes;
-
-	char type;
-
-	Airplane() {
-planes.push_back(this);
-}
-
-
-~Airplane() {
-auto it = planes.find(this);
-planes.remove(it);
-}
-
-static void renderAll();
-static void updateAll( float dt );
-};
-
-//guardar informacion de cada "material" dentro de un vector
-
-class PropType {
-	int index;
-	Mesh* mesh;
-	Texture* texture;
-	//...
-};
-
-//array of types (max 32 types)
-PropType proptypes[32];
-class Prop {
-	public:
-		int type;	//index to the array
-		Matrix44 model;
-};
-*/
