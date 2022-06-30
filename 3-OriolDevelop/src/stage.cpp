@@ -101,15 +101,10 @@ void IntroStage::renderQuad(Mesh quad, Texture* tex, Matrix44 anim = Matrix44())
 	a_shader->disable();
 }
 
-
-
 void IntroStage::Render() {
 	
 	int window_width = Game::instance->window_width;
 	int window_height = Game::instance->window_height;
-
-	//Texture* bgtex = Texture::Get("data/bg.png");
-	
 
 	if (this->initSize != window_height) { //resize window
 		this->quads.clear();
@@ -124,16 +119,13 @@ void IntroStage::Render() {
 		//a_shader->enable();
 		Mesh quad = this->quads[i];
 		renderQuad(quad, tex, Matrix44());
-		
 	}
-	
 	tex = this->menuPointer_tex;
 	Matrix44 gloveModel;
 	gloveModel.translate(sin(Game::instance->time*4) * 6, 0, 0);
 	renderQuad(this->menuPtr_mesh, tex, gloveModel);
 	renderGUI(60, window_height - 100, 64, 64, this->texIntro, true);
 	renderGUI(window_width / 2, window_height / 2, window_width, window_height, this->bgtex, true);
-	
 	for (int i = 0; i < this->tags.size(); i++)
 	{
 		textStruct curr = this->tags[i];
@@ -147,14 +139,13 @@ void IntroStage::Render() {
 void IntroStage::Update(float seconds_elapsed) {
 	Scene* scene = Game::instance->scene;
 
-	if (!scene->music_Playing) { 
-		scene->audio->PlayGameSound(0, 2); 
+	if (!scene->music_Playing) {
+		scene->audio->PlayGameSound(0, 2);
 		scene->music_Playing == true;
 	}
 
 	//std::cout << this->menuPointer << std::endl;
 	if (Input::wasKeyPressed(SDL_SCANCODE_S)) {
-		
 		scene->audio->PlayGameSound(1,2);
 		this->menuPointer = (this->menuPointer +1) % 5;
 		movePtr();
@@ -171,12 +162,14 @@ void IntroStage::Update(float seconds_elapsed) {
 		scene->audio->PlayGameSound(2, 2);
 		if (this->menuPointer == 4) Game::instance->must_exit = true;
 		SetStage((STAGE_ID)(this->menuPointer+1), Game::instance->scene->currentStage );
+		
 	}
 }
 
 //TUTORIAL STAGE
 
 void TutorialStage::Render() {
+
 	int window_width = Game::instance->window_width;
 	int window_height = Game::instance->window_height;
 
@@ -187,23 +180,22 @@ void TutorialStage::Render() {
 		s->music_Playing = true;
 	}
 
-	//TO DO
 	renderGUI(80, window_height - 100, 64, 64, this->texBack, true);
-	
-	renderGUI(window_width/2, window_height/2, window_width, window_height, this->tex, true);
 
-	
+	renderGUI(window_width / 2, window_height / 2, window_width, window_height, this->tex, true);
+
+
+
 }
 
 void TutorialStage::Update(float seconds_elapsed) {
-	//TO DO
+
 	Scene* scene = Game::instance->scene;
 	if (Input::wasKeyPressed(SDL_SCANCODE_C)) {
 		scene->audio->ResetAudio();
 		scene->music_Playing = false;
 		SetStage(STAGE_ID::INTRO, Game::instance->scene->currentStage);
 	}
-
 }
 
 //PLAY STAGE
@@ -260,9 +252,27 @@ void MultiStage::Update(float seconds_elapsed) {
 //END STAGE
 
 void EndStage::Render() {
-	//TO DO
+
+	int window_width = Game::instance->window_width;
+	int window_height = Game::instance->window_height;
+
+	drawText(window_width - window_width * 0.84, window_height - window_height * 0.7, "YOU WIN", Vector3(1, 1, 1), window_width / 60);
+	if (int(Game::instance->time) % 2 == 0) {
+		drawText(window_width - window_width * 0.96, window_height - window_height * 0.3, "PRESS C TO PLAY AGAIN OR X TO RETURN MENU", Vector3(1, 1, 1), window_width / 250);
+	}
 }
 
 void EndStage::Update(float seconds_elapsed) {
-	//TO DO
+	Scene* s = Game::instance->scene;
+
+	if (Input::wasKeyPressed(SDL_SCANCODE_C)) {
+		s->currentLevel = 0;
+		SetStage(STAGE_ID::PLAY, Game::instance->scene->currentStage);
+	}
+	if (Input::wasKeyPressed(SDL_SCANCODE_X)) {
+		s->currentLevel = 0;
+		s->audio->ResetAudio();
+		SetStage(STAGE_ID::INTRO, Game::instance->scene->currentStage);
+	}
+
 }

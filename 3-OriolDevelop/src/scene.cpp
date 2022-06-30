@@ -21,7 +21,7 @@ Scene::Scene()
 	if (BASS_Init(-1, 44100, 0, 0, NULL) == false) { //-1 significa usar el por defecto del sistema operativo
 		std::cout << "ERROR initializing audio" << std::endl;
 	}
-	audio->LoadSample("data/music/sfx_enter.mp3",1); // 1 to be loaded in the in-game samples //0
+	audio->LoadSample("data/music/sfx_enter.mp3", 1); // 1 to be loaded in the in-game samples //0
 
 	audio->LoadSample("data/music/sfx_hit.mp3", 1);//1
 	audio->LoadSample("data/music/sfx_youwin.mp3", 1);//2
@@ -30,10 +30,12 @@ Scene::Scene()
 	audio->LoadSample("data/music/punch.wav", 1);//4
 	audio->LoadSample("data/music/kick.wav", 1);//5
 
-	audio->LoadSample("data/music/Level4Song.mp3", 1);
-	audio->LoadSample("data/music/Level3Song.mp3", 1);
-	audio->LoadSample("data/music/Level2Song.mp3", 1);
-	audio->LoadSample("data/music/Level1Song.mp3", 1);
+	audio->LoadSample("data/music/sfx_dead.wav",1);//6
+
+	audio->LoadSample("data/music/Level4Song.mp3", 1);//7
+	audio->LoadSample("data/music/Level3Song.mp3", 1);//8
+	audio->LoadSample("data/music/Level2Song.mp3", 1);//9
+	audio->LoadSample("data/music/Level1Song.mp3", 1);//10
 	
 	// menu samples 
 	audio->LoadSample("data/music/intro_music.mp3", 2);// 2 to be loaded into the menu sounds
@@ -208,13 +210,21 @@ void ExportMap(std::vector<EntityMesh*>& entities, EntityMesh* groundMesh, Entit
 	myfile.close();
 }
 
-void ImportEnemies(const char* path, std::vector<sPlayer*>& enemies) {
+void ImportEnemies(const char* path, std::vector<sPlayer*>& enemies, bool& isBoss) {
 	
 	//prepare file content
 	std::string content = "";
 	readFile(path, content);
 	std::stringstream ss(content);
 
+	//read if boss
+	int boss;
+	ss >> boss;
+	if (boss >= 1) {
+		isBoss = true;
+	}
+
+	std::cout << isBoss << std::endl;
 	//read entities
 	while (!ss.eof()) {
 		//read values

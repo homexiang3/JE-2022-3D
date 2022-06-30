@@ -2,7 +2,7 @@
 #include "utils.h"
 
 Audio::Audio() {
-	
+
 }
 
 Audio::~Audio() {
@@ -54,8 +54,8 @@ void Audio::LoadSample(const char* fileName, int where)
 	if (where == 1)this->samples.push_back(hSample);
 	else if (where == 2)this->Menu_samples.push_back(hSample);
 }
-void Audio::ResetAudio() {
 
+void Audio::ResetAudio() {
 	BASS_Stop();
 	BASS_Start();
 }

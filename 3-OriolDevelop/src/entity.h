@@ -72,6 +72,7 @@ struct Collider {
 //estructura para el player
 struct sPlayer {
 	sPlayer(const char* meshPath, const char* texPath, Vector3 spawn);
+	sPlayer() {};
 
 	Vector3 spawnPos;
 	Vector3 pos;
@@ -84,6 +85,8 @@ struct sPlayer {
 	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision y colliders)
 	int max_health = 10;
 	int health = 10;
+	int attack_dmg = 1;
+
 	EntityMesh* character_mesh = NULL;
 	Vector2 dash_direction;
 	float max_invulnerability_time = 1.5f;
@@ -99,73 +102,34 @@ struct sPlayer {
 	bool Protected = false;
 	//bool shield = true;
 
-	//animations
-	Animation* idle = NULL;
-	Animation* walk = NULL;
-	Animation* run = NULL;
-	Animation* left_puch = NULL;
-	Animation* kick = NULL;
-	Animation* dash = NULL;
-	Animation* jump = NULL;
-	Animation* protect = NULL;
-	Animation* hit = NULL;
-
-
 	Matrix44 getModel();
 	void initAnims();
 	void initColliders();
-	void playerMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, float seconds_elapsed, bool multi);
-	Vector3 playerCollision(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed);
-	void npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities,sPlayer* player, float seconds_elapsed);
+	void playerMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, float seconds_elapsed, bool multi, EntityMesh* boss = NULL);
+	Vector3 playerCollision(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed, EntityMesh* boss = NULL);
+	void npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities,sPlayer* player, float seconds_elapsed,  EntityMesh* boss = NULL);
 	void ChangeAnim(int i, float time);
 	Animation* renderAnim();
-	void punchCollision(std::vector<sPlayer*> enemies);
-	void kickCollision(std::vector<sPlayer*> enemies);
+	void attackCollision(std::vector<sPlayer*> enemies);
 	void updateInvulnerabilityTime(float seconds_elapsed);
+	void reset(float yaw);
 	
 };
 
-struct sBoss {
-	sBoss(const char* meshPath, const char* texPath);
+struct sBoss : public sPlayer {
+	sBoss(const char* meshPath, const char* texPath, Vector3 spawn);
 
-	Vector3 spawnPos;
-	Vector3 pos;
-	//Vector3 vel;
-	float playerVel = 4.0f;
-	float yaw = 0.0f;
-	//float pitch = 0.0f; //para el first person
-	float radius = 0.5f; //por si queremos hacer bounding con collisions (se usa en player collision)
-	int health = 10;
-	EntityMesh* character_mesh;
+	float playerVel = 8.0f;
 
 	//anims
-	std::vector<Animation*> anims;
 	int ctr = 1;
-	float animTimer = 0.0f;
 	int side = 1;
+	int attack_dmg = 3;
 
 	//weapons
 	EntityMesh* shuriken_mesh;
 
-	Animation* idle = NULL;
-	Animation* rest = NULL;
-	Animation* run = NULL;
-
-	Animation* die = NULL;
-	Animation* charge = NULL;
-
-	Animation* attackRect = NULL;
-	Animation* attackCone = NULL;
-	Animation* attackCircle = NULL;
-
-	Animation* shurikenSpawn = NULL;
-
 	bool animShurikens = false;
-
-	float testPositioner = 1.0f;
-	float testPositioner2 = 1.0f;
-	float testPositioner3 = 1.0f;
-	bool xd = true;
 
 	float attackTimer = 0.0f; //timer to start attack
 	int state = 0; //flag for boss state: 0 for free , 1 for attacking 
@@ -182,14 +146,9 @@ struct sBoss {
 	//to comunnicate hits to the level class ? 
 	bool hit = false;
 
-	//player invencibility timer
-	float invencibility = 0.0f;
-
 	Matrix44 getModel();
 	void initAnims();
-	//void playerMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, float seconds_elapsed, bool multi);
-	//Vector3 playerCollision(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed);
-	void npcMovement(sPlayer* player, float seconds_elapsed);
+	void npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities,sPlayer* player, float seconds_elapsed, EntityMesh* boss = NULL);
 	void ChangeAnim(int i, float time);
 	Animation* renderAnim();
 
