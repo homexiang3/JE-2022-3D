@@ -1,2 +1,2 @@
-data/skelly.mesh data/minichar_tex.png 2 1 10,0,15
-data/skelly.mesh data/minichar_tex.png 2 1 -10,0,-15
+0
+data/grunt.mesh data/minichar_tex.png 4 1 10,0,15

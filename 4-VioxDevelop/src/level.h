@@ -47,7 +47,9 @@ public:
 	std::vector<sPlayer*> enemies;
 	std::vector<sPlayer*> enemies_defeated;
 	Camera* cam = NULL;
-
+	// boss
+	sBoss* boss = NULL;
+	bool hasBoss = false;
 	Texture* quadTex;
 	Mesh playerHP_quad;
 	Camera cam2D;

@@ -60,7 +60,7 @@ void RenderMinimap(int widthStart, sPlayer*& player, std::vector<sPlayer*>& enem
 		EntityMesh* entityPoint = new EntityMesh(GL_TRIANGLES, "data/sphere.obj", "", "data/shaders/basic.vs", "data/shaders/flat.fs", Vector4(1, 0.5, 0.2, 1));
 		Matrix44 entityModel = entities[i]->model;
 		entityPoint->model = entityModel;
-		entityPoint->model.scale(6, 6, 6);
+		entityPoint->model.scale(9, 9, 9);
 		entityPoint->render(&cam);
 
 	}
@@ -236,15 +236,15 @@ void EditorLevel::Update(float seconds_elapsed) {
 	}
 	//cargar diferentes entities
 	if (this->currentOption == OBJECT) {
-		if (Input::wasKeyPressed(SDL_SCANCODE_1)) this->addEntityOnFront("data/map1/building-shop-china.obj", "data/map1/color-atlas.png");
-		if (Input::wasKeyPressed(SDL_SCANCODE_2)) this->addEntityOnFront("data/map1/building-shop-china.obj", "data/map1/color-atlas.png");
-		if (Input::wasKeyPressed(SDL_SCANCODE_3)) this->addEntityOnFront("data/map1/building-shop-china.obj", "data/map1/color-atlas.png");
-		if (Input::wasKeyPressed(SDL_SCANCODE_4)) this->addEntityOnFront("data/map1/building-shop-china.obj", "data/map1/color-atlas.png");
-		if (Input::wasKeyPressed(SDL_SCANCODE_5)) this->addEntityOnFront("data/map1/building-shop-china.obj", "data/map1/color-atlas.png");
-		if (Input::wasKeyPressed(SDL_SCANCODE_6)) this->addEntityOnFront("data/map1/building-shop-china.obj", "data/map1/color-atlas.png");
-		if (Input::wasKeyPressed(SDL_SCANCODE_7)) this->addEntityOnFront("data/map1/building-shop-china.obj", "data/map1/color-atlas.png");
-		if (Input::wasKeyPressed(SDL_SCANCODE_8)) this->addEntityOnFront("data/map1/building-shop-china.obj", "data/map1/color-atlas.png");
-		if (Input::wasKeyPressed(SDL_SCANCODE_9)) this->addEntityOnFront("data/map1/building-shop-china.obj", "data/map1/color-atlas.png");
+		if (Input::wasKeyPressed(SDL_SCANCODE_1)) this->addEntityOnFront("data/environment/wall1.obj", "data/environment/color-atlas.png");//uso
+		if (Input::wasKeyPressed(SDL_SCANCODE_2)) this->addEntityOnFront("data/environment/wall3.obj", "data/environment/color-atlas.png");//uso
+		if (Input::wasKeyPressed(SDL_SCANCODE_3)) this->addEntityOnFront("data/environment/gate1.obj", "data/environment/color-atlas.png");//free
+		if (Input::wasKeyPressed(SDL_SCANCODE_4)) this->addEntityOnFront("data/environment/gate2.obj", "data/environment/color-atlas.png");//free
+		if (Input::wasKeyPressed(SDL_SCANCODE_5)) this->addEntityOnFront("data/environment/building1.obj", "data/environment/color-atlas.png");//free
+		if (Input::wasKeyPressed(SDL_SCANCODE_6)) this->addEntityOnFront("data/environment/building2.obj", "data/environment/color-atlas.png");//free
+		if (Input::wasKeyPressed(SDL_SCANCODE_7)) this->addEntityOnFront("data/environment/tower.obj", "data/environment/color-atlas.png");//uso
+		if (Input::wasKeyPressed(SDL_SCANCODE_8)) this->addEntityOnFront("data/environment/tower2.obj", "data/environment/color-atlas.png");//uso
+		if (Input::wasKeyPressed(SDL_SCANCODE_9)) this->addEntityOnFront("data/environment/castle.obj", "data/environment/color-atlas.png");//uso
 	}
 	//editar los objetos
 	if (this->currentOption == EDIT) {
@@ -370,9 +370,9 @@ MultiLevel::MultiLevel() {
 
 
 	//players
-	this->player1 = new sPlayer("data/skelly.mesh", "data/minichar_tex.png", Vector3(0,0,-10));
+	this->player1 = new sPlayer("data/ninja.mesh", "data/minichar_tex.png", Vector3(0,0,-10));
 	this->player1->yaw = 180;
-	this->player2 = new sPlayer("data/skelly.mesh", "data/minichar_tex.png", Vector3(0,0,10));
+	this->player2 = new sPlayer("data/ninja.mesh", "data/minichar_tex.png", Vector3(0,0,10));
 	
 	//cams
 	int window_width = Game::instance->window_width;
@@ -451,6 +451,14 @@ void MultiLevel::Render() {
 
 
 void MultiLevel::Update(float seconds_elapsed) {
+
+	Scene* s = Game::instance->scene;
+	if (!s->music_Playing) {
+		s->audio->ResetAudio();
+		s->audio->PlayGameSound(s->audio->samples.size() - 2, 1);
+		s->music_Playing = true;
+	}
+
 	this->player1->updateInvulnerabilityTime(seconds_elapsed);
 	this->player2->updateInvulnerabilityTime(seconds_elapsed);
 
@@ -464,6 +472,7 @@ void MultiLevel::Update(float seconds_elapsed) {
 	if (Input::wasKeyPressed(SDL_SCANCODE_T)) {
 		this->player1->health--;
 		this->player2->health--;
+		s->audio->PlayGameSound(1, 1);
 		updateHealthBar(-78, this->player1HP_quad, this->player1);
 		updateHealthBar(22, this->player2HP_quad, this->player2);
 	}
@@ -474,7 +483,7 @@ void MultiLevel::Update(float seconds_elapsed) {
 }
 
 void MultiLevel::RenderWorld(Camera* cam) {
-	//gigantismo
+
 	this->player1->character_mesh->anim = this->player1->renderAnim();
 	this->player2->character_mesh->anim = this->player2->renderAnim();
 
@@ -504,6 +513,13 @@ void MultiLevel::RenderWorld(Camera* cam) {
 		EntityMesh* entity = this->entities[i];
 		entity->render(cam);
 	}
+	//render shield
+	if (this->player1->ctr == 6) {
+		this->player1->shield->render(cam);
+	}
+	if (this->player2->ctr == 6) {
+		this->player2->shield->render(cam);
+	}
 }
 
  //PLAYABLE LEVEL
@@ -511,11 +527,11 @@ void MultiLevel::RenderWorld(Camera* cam) {
 PlayLevel::PlayLevel(const char* map, const char* enemiesPath) {
 
 	//player
-	this->player = new sPlayer("data/skelly.mesh", "data/minichar_tex.png", Vector3(0,0,0));
+	this->player = new sPlayer("data/ninja.mesh", "data/minichar_tex.png", Vector3(0,0,0));
 	
 	//get objects
 	ImportMap(map, this->entities, this->groundMesh, this->skyMesh);
-	ImportEnemies(enemiesPath, this->enemies);
+	ImportEnemies(enemiesPath, this->enemies, this->hasBoss);
 
 	//camera
 	int window_width = Game::instance->window_width;
@@ -528,6 +544,16 @@ PlayLevel::PlayLevel(const char* map, const char* enemiesPath) {
 	//player hp
 	this->playerHP_quad.createQuad(-78, 90, 30, 5,true);
 	this->quadTex = Texture::Get("data/menu/healthbar.tga");
+
+	//boss 
+	if (this->hasBoss) {
+
+		this->boss = new sBoss("data/boss/boss.mesh", "data/minichar_tex.png");
+		this->entities.push_back(this->boss->character_mesh);
+		//this->entities.push_back(this->boss->shuriken_mesh);
+		this->boss->pos = Vector3(10, 0, 10);
+
+	}
 	
 }
 
@@ -536,6 +562,7 @@ void PlayLevel::resetLevel() {
 	this->player->health = this->player->max_health;
 	updateHealthBar(-78, playerHP_quad, this->player);
 	this->player->yaw = 0;
+	this->player->invulnerability_time = 0.0f;
 	//mover a los derrotados de nuevo al array de vivos
 	for (size_t i = 0; i < this->enemies_defeated.size(); i++)
 	{
@@ -558,7 +585,7 @@ void PlayLevel::resetLevel() {
 
 
 void PlayLevel::Render() {
-
+	Scene* s = Game::instance->scene;
 	int window_width = Game::instance->window_width;
 	int window_height = Game::instance->window_height;
 
@@ -589,7 +616,22 @@ void PlayLevel::Render() {
 			EntityMesh* playerMesh = this->player->character_mesh;
 			this->player->colliders[i]->updateCollider(playerMesh, this->cam);
 		}
-
+		//boss
+		if (this->hasBoss) {
+			this->boss->character_mesh->anim = this->boss->renderAnim();//render anim
+			this->boss->character_mesh->render(this->cam);//boss render
+			this->boss->Attack(this->cam, this->player->pos);
+			if (this->boss->hit) {
+				this->boss->hit = false;
+				if (this->player->invulnerability_time <= 0.0f) {
+					this->player->health--;
+					updateHealthBar(-78, this->playerHP_quad, this->player);
+					s->audio->PlayGameSound(1, 1);
+					this->player->invulnerability_time = this->player->max_invulnerability_time;
+					std::cout << "collison with boss" << std::endl;
+				}
+			}
+		}
 		for (size_t i = 0; i < this->entities.size(); i++)//entities added
 		{
 			EntityMesh* entity = this->entities[i];
@@ -617,6 +659,10 @@ void PlayLevel::Render() {
 
 		}
 
+		if (this->player->ctr == 6) {
+			this->player->shield->render(cam);
+		}
+
 		RenderMinimap(window_width, this->player, this->enemies, this->groundMesh, this->entities);
 
 		//hp
@@ -634,6 +680,13 @@ void PlayLevel::Render() {
 void PlayLevel::Update(float seconds_elapsed) {
 	Scene* s = Game::instance->scene;
 
+	if (!s->music_Playing) {
+		std::cout << s->audio->samples.size();
+		s->audio->ResetAudio();
+		s->audio->PlayGameSound(s->audio->samples.size() - s->currentLevel - 1, 1);
+		s->music_Playing = true;
+	}
+
 	if (this->player->health > 0) {
 		this->player->playerMovement(this->enemies, this->entities, seconds_elapsed, false);
 		this->player->updateInvulnerabilityTime(seconds_elapsed);
@@ -648,15 +701,22 @@ void PlayLevel::Update(float seconds_elapsed) {
 			enemy->npcMovement(e, this->entities, this->player, seconds_elapsed);
 		}
 
+		if (this->hasBoss) {
+			this->boss->npcMovement(this->player, seconds_elapsed);//boss
+		}
+
 		//update level when no enemies left
 		if (this->enemies.size() <= 0) {
 			int nextLevel = (s->currentLevel + 1) % s->levels.size();
 			this->resetLevel();
 			if (s->currentLevel + 1 < s->levels.size()) {
 				s->currentLevel = nextLevel;
+				s->music_Playing = false;
 			}
 			else {
 
+				s->audio->ResetAudio();
+				s->audio->PlayGameSound(2, 1);//game over sfx
 				SetStage(STAGE_ID::END, Game::instance->scene->currentStage);
 			}
 		}
@@ -680,6 +740,7 @@ void PlayLevel::Update(float seconds_elapsed) {
 	//debug HP
 	if (Input::wasKeyPressed(SDL_SCANCODE_T)) {
 		this->player->health --;
+		s->audio->PlayGameSound(1, 1);
 		updateHealthBar(-78, this->playerHP_quad, this->player);
 	}
 	//debug resetLevel

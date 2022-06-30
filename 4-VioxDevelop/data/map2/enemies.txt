@@ -1,3 +1,4 @@
-data/skelly.mesh data/minichar_tex.png 4 1 -10,0,15
-data/skelly.mesh data/minichar_tex.png 4 1 0,0,10
-data/skelly.mesh data/minichar_tex.png 4 1 10,0,-15
+0
+data/village.mesh data/minichar_tex.png 6 2 -10,0,15
+data/village.mesh data/minichar_tex.png 6 2 0,0,10
+data/village.mesh data/minichar_tex.png 6 2 10,0,-15

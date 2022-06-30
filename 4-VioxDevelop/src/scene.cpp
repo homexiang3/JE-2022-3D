@@ -21,12 +21,24 @@ Scene::Scene()
 	if (BASS_Init(-1, 44100, 0, 0, NULL) == false) { //-1 significa usar el por defecto del sistema operativo
 		std::cout << "ERROR initializing audio" << std::endl;
 	}
-	audio->LoadSample("data/music/sfx_enter.wav",1); // 1 to be loaded in the in-game samples
+	audio->LoadSample("data/music/sfx_enter.mp3", 1); // 1 to be loaded in the in-game samples //0
+
+	audio->LoadSample("data/music/sfx_hit.mp3", 1);//1
+	audio->LoadSample("data/music/sfx_youwin.mp3", 1);//2
+
+	audio->LoadSample("data/music/dash.wav", 1);//3
+	audio->LoadSample("data/music/punch.wav", 1);//4
+	audio->LoadSample("data/music/kick.wav", 1);//5
+
+	audio->LoadSample("data/music/Level4Song.mp3", 1);
+	audio->LoadSample("data/music/Level3Song.mp3", 1);
+	audio->LoadSample("data/music/Level2Song.mp3", 1);
+	audio->LoadSample("data/music/Level1Song.mp3", 1);
 	
 	// menu samples 
-	audio->LoadSample("data/music/intro_music.wav", 2);// 2 to be loaded into the menu sounds
-	audio->LoadSample("data/music/sfx_menu.wav", 2);
-	audio->LoadSample("data/music/sfx_enter.wav", 2);
+	audio->LoadSample("data/music/intro_music.mp3", 2);// 2 to be loaded into the menu sounds
+	audio->LoadSample("data/music/sfx_menu.mp3", 2);
+	audio->LoadSample("data/music/sfx_enter.mp3", 2);
 	
 		
 }
@@ -196,13 +208,21 @@ void ExportMap(std::vector<EntityMesh*>& entities, EntityMesh* groundMesh, Entit
 	myfile.close();
 }
 
-void ImportEnemies(const char* path, std::vector<sPlayer*>& enemies) {
+void ImportEnemies(const char* path, std::vector<sPlayer*>& enemies, bool& isBoss) {
 	
 	//prepare file content
 	std::string content = "";
 	readFile(path, content);
 	std::stringstream ss(content);
 
+	//read if boss
+	int boss;
+	ss >> boss;
+	if (boss >= 1) {
+		isBoss = true;
+	}
+
+	std::cout << isBoss << std::endl;
 	//read entities
 	while (!ss.eof()) {
 		//read values
@@ -234,7 +254,7 @@ void renderGUI(float x, float y, float w, float h, Texture* tex, bool flipYV) {
 
 	Camera cam2D;
 	cam2D.setOrthographic(0, windowWidth, windowHeight, 0, -1, 1);
-	assert(mesh != NULL, "mesh in renderMesh was null");
+	//assert(mesh != NULL, "mesh in renderMesh was null");
 
 	Shader* shader = Shader::Get("data/shaders/basic.vs", "data/shaders/texture.fs");
 
@@ -250,7 +270,7 @@ void renderGUI(float x, float y, float w, float h, Texture* tex, bool flipYV) {
 	{
 		shader->setUniform("u_texture", tex, 0);
 	}
-	shader->setUniform("u_time", time);
+	shader->setUniform("u_time", Game::instance->time);
 	shader->setUniform("u_text_tiling", 1.0f);
 	Matrix44 quadModel;
 	//quadModel.translate(sin(Game::instance->time ) * 20, 0, 0);
