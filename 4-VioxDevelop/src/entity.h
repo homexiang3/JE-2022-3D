@@ -114,12 +114,12 @@ struct sPlayer {
 	void initColliders();
 	void playerMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, float seconds_elapsed, bool multi);
 	Vector3 playerCollision(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed);
-	void npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities,sPlayer* player, float seconds_elapsed);
+	void npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities,sPlayer* player, float seconds_elapsed, Mesh& playerHP_quad, bool quad, int position);
 	void ChangeAnim(int i, float time);
 	Animation* renderAnim();
-	void punchCollision(std::vector<sPlayer*> enemies);
-	void kickCollision(std::vector<sPlayer*> enemies);
+	void attackCollision(std::vector<sPlayer*> enemies, Mesh& playerHP_quad, bool quad, int position);
 	void updateInvulnerabilityTime(float seconds_elapsed);
+	void reset(float yaw);
 	
 };
 

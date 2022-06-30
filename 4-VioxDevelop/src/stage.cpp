@@ -230,9 +230,27 @@ void MultiStage::Update(float seconds_elapsed) {
 //END STAGE
 
 void EndStage::Render() {
-	//TO DO
+
+	int window_width = Game::instance->window_width;
+	int window_height = Game::instance->window_height;
+
+	drawText(window_width - window_width * 0.84, window_height - window_height * 0.7, "YOU WIN", Vector3(1, 1, 1), window_width / 60);
+	if (int(Game::instance->time) % 2 == 0) {
+		drawText(window_width - window_width * 0.96, window_height - window_height * 0.3, "PRESS C TO PLAY AGAIN OR X TO RETURN MENU", Vector3(1, 1, 1), window_width / 250);
+	}
 }
 
 void EndStage::Update(float seconds_elapsed) {
-	//TO DO
+	Scene* s = Game::instance->scene;
+
+	if (Input::wasKeyPressed(SDL_SCANCODE_C)) {
+		s->currentLevel = 0;
+		SetStage(STAGE_ID::PLAY, Game::instance->scene->currentStage);
+	}
+	if (Input::wasKeyPressed(SDL_SCANCODE_X)) {
+		s->currentLevel = 0;
+		s->audio->ResetAudio();
+		SetStage(STAGE_ID::INTRO, Game::instance->scene->currentStage);
+	}
+
 }

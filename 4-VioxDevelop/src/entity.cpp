@@ -72,7 +72,7 @@ void EntityMesh::render(Camera* camera) {
 	float tiling = this->tiling;
 
 	//comprueba que esten cargados
-	assert(a_mesh != NULL, "mesh in Entity Render was null"); //debug
+ 	assert(a_mesh != NULL, "mesh in Entity Render was null"); //debug
 	assert(a_shader != NULL, "shader in Entity Render was null");
 
 	if (!a_shader) return;
@@ -262,9 +262,31 @@ Vector3 sPlayer::playerCollision(std::vector<sPlayer*> enemies,  std::vector<Ent
 		return nextPos;
 	}
 
+	/*boss
+	if (boss != NULL) {
+		Vector3 coll;
+		Vector3 collnorm;
+		EntityMesh* enemyEntity = boss->character_mesh;
+		if (enemyEntity->mesh->testSphereCollision(enemyEntity->model, character_center, this->radius, coll, collnorm)) {
+
+			//si la esfera está colisionando muevela a su posicion anterior alejandola del objeto
+			Vector3 push_away = normalize(coll - character_center) * seconds_elapsed;
+			nextPos = this->pos - push_away;
+
+			//cuidado con la Y, si nuestro juego es 2D la ponemos a 0
+			nextPos.y = 0;
+
+			//reflejamos el vector velocidad para que de la sensacion de que rebota en la pared
+			//velocity = reflect(velocity, collnorm) * 0.95;
+			return nextPos;
+		}
+	}*/
+	
+
+
 	return nextPos;
 }
-void sPlayer::punchCollision(std::vector<sPlayer*> enemies) {
+void sPlayer::attackCollision(std::vector<sPlayer*> enemies, Mesh& playerHP_quad, bool quad, int position) {
 
 	for (size_t i = 0; i < enemies.size(); i++)
 	{
@@ -286,7 +308,7 @@ void sPlayer::punchCollision(std::vector<sPlayer*> enemies) {
 		EntityMesh* enemyEntity = currentEnemy->character_mesh;
 
 		//testeo collision
-		for (size_t i = 0; i < this->colliders.size() / 2; i++)
+		for (size_t i = 0; i < this->colliders.size(); i++)
 		{
 			Collider* currentCollider = this->colliders[i];
 			Vector3 coll_center = currentCollider->colliderMesh->model.getTranslation();
@@ -302,9 +324,14 @@ void sPlayer::punchCollision(std::vector<sPlayer*> enemies) {
 				attack_dmg *= 2;
 
 			if (enemyEntity->mesh->testSphereCollision(enemyEntity->model, coll_center, 1, coll, collnorm)) {
+				Scene* s = Game::instance->scene;
+				s->audio->PlayGameSound(1, 1);
 				currentEnemy->invulnerability_time = currentEnemy->max_invulnerability_time;
 				currentEnemy->character_mesh->color = Vector4(1, 0, 0, 1);
 				currentEnemy->health -= attack_dmg;
+				if (quad) {
+					updateHealthBar(position, playerHP_quad, currentEnemy);
+				}
 				std::cout << "Enemy Health " << currentEnemy->health << std::endl;
 				
 			}
@@ -312,36 +339,7 @@ void sPlayer::punchCollision(std::vector<sPlayer*> enemies) {
 
 	}
 }
-void sPlayer::kickCollision(std::vector<sPlayer*> enemies) {
 
-	for (size_t i = 0; i < enemies.size(); i++)
-	{
-		sPlayer* currentEnemy = enemies[i];
-
-
-		//comprobamos si colisiona el objeto con la esfera (radio 3)
-		Vector3 coll;
-		Vector3 collnorm;
-		EntityMesh* enemyEntity = currentEnemy->character_mesh;
-
-		//testeo collision
-		for (size_t i = 2; i < this->colliders.size(); i++)
-		{
-			Collider* currentCollider = this->colliders[i];
-			Vector3 coll_center = currentCollider->colliderMesh->model.getTranslation();
-			if (currentEnemy->invulnerability_time > 0)
-				continue;
-
-			if (enemyEntity->mesh->testSphereCollision(enemyEntity->model, coll_center, 1, coll, collnorm)) {
-				currentEnemy->invulnerability_time = currentEnemy->max_invulnerability_time;
-				currentEnemy->character_mesh->color = Vector4(1, 0, 0, 1);
-				currentEnemy->health -= 1;
-				std::cout << "Enemy Health " << currentEnemy->health << std::endl;
-			}
-		}
-
-	}
-}
 
 void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMesh*> entities,float seconds_elapsed, bool multi) {
 	Scene* scene = Game::instance->scene;
@@ -386,7 +384,7 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	//kick
 	if (Input::wasKeyPressed(kickKey) && this->animTimer <= 0.2f) {
 		this->side = this->side * -1;
-		this->ChangeAnim(4, this->anims[4]->duration);
+		this->ChangeAnim(4, this->anims[4]->duration / 1.8 - 0.2);
 		scene->audio->PlayGameSound(5, 1);
 	}
 
@@ -465,18 +463,10 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 
 	nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed);
 
-	//test attack collisions
-	if (this->ctr == 3) { //punch
-		this->punchCollision(enemies);
-	}
-	if (this->ctr == 4) { //kick
-		this->kickCollision(enemies);
-	}
-
 	this->pos = nextPos;
 }
 
-void sPlayer::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, sPlayer* player, float seconds_elapsed) {
+void sPlayer::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, sPlayer* player, float seconds_elapsed, Mesh& playerHP_quad, bool quad, int position) {
 
 	this->animTimer = max(0.0f, this->animTimer - seconds_elapsed);
 
@@ -510,13 +500,9 @@ void sPlayer::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*
 		std::vector<sPlayer*> playerEnemy;
 		playerEnemy.push_back(player);
 		if (this->ctr == 3) { //punch
-			this->punchCollision(playerEnemy);
+			this->attackCollision(playerEnemy, playerHP_quad, quad, position);
 		}
-		/*
-		if (this->ctr == 4) { //kick
-			this->kickCollision(playerEnemy);
-		}
-		*/
+
 	}
 }
 void sPlayer::ChangeAnim( int i, float time)
@@ -821,4 +807,12 @@ Animation* sBoss::renderAnim() {
 
 			}
 		}
+	}
+
+	void sPlayer::reset(float yaw) {
+		this->invulnerability_time = 0.0f;
+		this->pos = this->spawnPos;
+		this->yaw = yaw;
+		this->health = this->max_health;
+		this->animTimer = 0;
 	}
