@@ -176,8 +176,9 @@ void sPlayer::initAnims() {
 	this->dash = Animation::Get("data/anims/dash.skanim");
 	this->jump = Animation::Get("data/anims/jump.skanim");
 	this->protect = Animation::Get("data/anims/block.skanim");
+	this->hit = Animation::Get("data/anims/hit.skanim");
 
-	this->anims.reserve(8);
+	this->anims.reserve(9);
 	this->anims.push_back(this->idle);
 	this->anims.push_back(this->walk);
 	this->anims.push_back(this->run);
@@ -186,6 +187,7 @@ void sPlayer::initAnims() {
 	this->anims.push_back(this->dash);
 	this->anims.push_back(this->jump);
 	this->anims.push_back(this->protect);
+	this->anims.push_back(this->hit);
 }
 
 void sPlayer::initColliders() {
@@ -363,14 +365,14 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	}
 
 	//punch 
-	if (Input::wasKeyPressed(punchKey) && this->animTimer <= 0.2f) {
+	if (Input::wasKeyPressed(punchKey) && this->animTimer <= 0.2f && this->ctr != 8) {
 		this->side = this->side * -1;
 		this->ChangeAnim(3, this->anims[3]->duration / 1.8 - 0.05);
 		scene->audio->PlayGameSound(4,1);
 	}
 
 	//kick
-	if (Input::wasKeyPressed(kickKey) && this->animTimer <= 0.2f) {
+	if (Input::wasKeyPressed(kickKey) && this->animTimer <= 0.2f && this->ctr != 8) {
 		this->side = this->side * -1;
 		this->ChangeAnim(4, this->anims[4]->duration);
 		scene->audio->PlayGameSound(5, 1);
@@ -379,7 +381,7 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	//shield 
 	this->shield->model.setTranslation(this->pos.x, 0, this->pos.z);
 	this->shield->model.rotate(180.0f * DEG2RAD * Game::instance->time, Vector3(0, 1, 0));
-	if (Input::wasKeyPressed(shield) && this->animTimer <= 0.2f) {
+	if (Input::wasKeyPressed(shield) && this->animTimer <= 0.2f && this->ctr !=8) {
 		this->Protected = true;
 		this->ChangeAnim(7, 0.75f);
 	}
@@ -410,20 +412,20 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 
 	Vector3 playerVel;
 	
-	if (Input::isKeyPressed(upKey) && this->ctr != 5 && this->ctr !=7)
+	if (Input::isKeyPressed(upKey) && this->ctr != 5 && this->ctr !=7 && this->ctr != 8)
 	{
 		playerVel = playerVel + (forward * this->playerVel);
 		this->ChangeAnim(1, NULL);
 	}
-	if (Input::isKeyPressed(downKey) && this->ctr != 5 && this->ctr != 7)
+	if (Input::isKeyPressed(downKey) && this->ctr != 5 && this->ctr != 7 && this->ctr != 8)
 	{
 		playerVel = playerVel - (forward * this->playerVel);
 		this->ChangeAnim(1, NULL);
 	}
 	
 
-	if (Input::isKeyPressed(rightRotKey) && this->ctr != 7) this->yaw += rotSpeed;
-	if (Input::isKeyPressed(leftRotKey) && this->ctr != 7) this->yaw -= rotSpeed;
+	if (Input::isKeyPressed(rightRotKey) && this->ctr != 7 && this->ctr != 8) this->yaw += rotSpeed;
+	if (Input::isKeyPressed(leftRotKey) && this->ctr != 7 && this->ctr != 8) this->yaw -= rotSpeed;
 
 	
 	if (Input::isKeyPressed(runKey)) ChangeAnim(2, NULL);// run anim
@@ -445,7 +447,7 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 		playerVel[0] -= sumX;
 		playerVel[2] -= sumZ;
 	}
-	if (Input::wasKeyPressed(dashKey)) {
+	if (Input::wasKeyPressed(dashKey) && this->ctr != 8 && this->ctr != 7) {
 		std::cout << sumX << "  " << sumZ << std::endl;
 		playerVel[0] -= sumX;
 		playerVel[2] -= sumZ;
@@ -710,12 +712,12 @@ Animation* sBoss::renderAnim() {
 	void sBoss::katanaRender(Camera * cam)
 	{
 		//Matrix44 neckLocalMatrix = this->anim->skeleton.getBoneMatrix(texts[i], false);
-		Matrix44 neckLocalMatrix = this->character_mesh->anim->skeleton.getBoneMatrix("mixamorig_RightHandThumb3", false);//mixamorig_LeftHandIndex2
+		Matrix44 neckLocalMatrix = this->character_mesh->anim->skeleton.getBoneMatrix("mixamorig_RightHandThumb1", false);//mixamorig_LeftHandIndex2
 
 		Matrix44 localToWorldMatrix = neckLocalMatrix * this->character_mesh->model;
 		//localToWorldMatrix.scale(0.03, 0.03, 0.03);
 		EntityMesh* rightHand = new EntityMesh(GL_TRIANGLES, "data/boss/naginata.obj", "data/boss/tex2.png", "data/shaders/skinning.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
-		////localToWorldMatrix.translate(0, -13, -1);
+		localToWorldMatrix.translate(+10, 0, 10);
 		//localToWorldMatrix.rotate(180 * DEG2RAD, Vector3(1, 0, 0));//x
 		rightHand->model = localToWorldMatrix;
 		//rightHand->model.rotate((-47+90) * DEG2RAD, Vector3(1, 0, 0));//x

@@ -441,6 +441,9 @@ void MultiLevel::Render() {
 	enemies.push_back(this->player1);
 	RenderMinimap(window_width, this->player2, enemies, this->groundMesh, this->entities);
 
+	//HP update
+	updateHealthBar(-78, this->player1HP_quad, this->player1);
+	updateHealthBar(22, this->player2HP_quad, this->player2);
 	//Hp bars
 	drawHP(this->player1HP_quad, this->quadTex, Matrix44(),this->cam2D);
 	drawHP(this->player2HP_quad, this->quadTex, Matrix44(),this->cam2D);
@@ -458,7 +461,6 @@ void MultiLevel::Update(float seconds_elapsed) {
 		s->audio->PlayGameSound(s->audio->samples.size() -2, 1);
 		s->music_Playing = true;
 	}
-	Scene* s = Game::instance->scene;
 	this->player1->updateInvulnerabilityTime(seconds_elapsed);
 	this->player2->updateInvulnerabilityTime(seconds_elapsed);
 
@@ -620,7 +622,7 @@ void PlayLevel::Render() {
 			this->boss->hit = false;
 			if (this->player->invulnerability_time <= 0.0f) {
 				this->player->health--;
-				updateHealthBar(-78, this->playerHP_quad, this->player);
+				this->player->ChangeAnim(8, this->player->anims[8]->duration);
 				s->audio->PlayGameSound(1, 1);
 				this->player->invulnerability_time = this->player->max_invulnerability_time;
 				std::cout << "collison with boss" << std::endl;
@@ -661,6 +663,7 @@ void PlayLevel::Render() {
 		RenderMinimap(window_width, this->player, this->enemies, this->groundMesh, this->entities);
 
 		//hp
+		updateHealthBar(-78, this->playerHP_quad, this->player);
 		drawHP(this->playerHP_quad, this->quadTex, Matrix44(), this->cam2D);
 		drawText(2.8 * window_width / 800, 22 * window_height / 600, "HP", Vector3(1, 1, 1), window_width / 400);
 	}
@@ -730,7 +733,7 @@ void PlayLevel::Update(float seconds_elapsed) {
 	}
 	//debug HP
 	if (Input::wasKeyPressed(SDL_SCANCODE_T)) {
-		this->player->health --;
+		//this->player->health --;
 		s->audio->PlayGameSound(1, 1);
 		updateHealthBar(-78, this->playerHP_quad, this->player);
 	}

@@ -101,10 +101,15 @@ void IntroStage::renderQuad(Mesh quad, Texture* tex, Matrix44 anim = Matrix44())
 	a_shader->disable();
 }
 
+
+
 void IntroStage::Render() {
 	
 	int window_width = Game::instance->window_width;
 	int window_height = Game::instance->window_height;
+
+	//Texture* bgtex = Texture::Get("data/bg.png");
+	
 
 	if (this->initSize != window_height) { //resize window
 		this->quads.clear();
@@ -119,11 +124,16 @@ void IntroStage::Render() {
 		//a_shader->enable();
 		Mesh quad = this->quads[i];
 		renderQuad(quad, tex, Matrix44());
+		
 	}
+	
 	tex = this->menuPointer_tex;
 	Matrix44 gloveModel;
 	gloveModel.translate(sin(Game::instance->time*4) * 6, 0, 0);
 	renderQuad(this->menuPtr_mesh, tex, gloveModel);
+	renderGUI(60, window_height - 100, 64, 64, this->texIntro, true);
+	renderGUI(window_width / 2, window_height / 2, window_width, window_height, this->bgtex, true);
+	
 	for (int i = 0; i < this->tags.size(); i++)
 	{
 		textStruct curr = this->tags[i];
@@ -167,13 +177,33 @@ void IntroStage::Update(float seconds_elapsed) {
 //TUTORIAL STAGE
 
 void TutorialStage::Render() {
+	int window_width = Game::instance->window_width;
+	int window_height = Game::instance->window_height;
+
+	Scene* s = Game::instance->scene;
+	if (!s->music_Playing) {
+		s->audio->ResetAudio();
+		s->audio->PlayGameSound(s->audio->samples.size() - 1, 1);
+		s->music_Playing = true;
+	}
 
 	//TO DO
+	renderGUI(80, window_height - 100, 64, 64, this->texBack, true);
+	
+	renderGUI(window_width/2, window_height/2, window_width, window_height, this->tex, true);
 
+	
 }
 
 void TutorialStage::Update(float seconds_elapsed) {
 	//TO DO
+	Scene* scene = Game::instance->scene;
+	if (Input::wasKeyPressed(SDL_SCANCODE_C)) {
+		scene->audio->ResetAudio();
+		scene->music_Playing = false;
+		SetStage(STAGE_ID::INTRO, Game::instance->scene->currentStage);
+	}
+
 }
 
 //PLAY STAGE

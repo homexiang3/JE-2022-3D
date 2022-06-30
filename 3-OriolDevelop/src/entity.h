@@ -99,15 +99,17 @@ struct sPlayer {
 	bool Protected = false;
 	//bool shield = true;
 
+	//animations
 	Animation* idle = NULL;
 	Animation* walk = NULL;
 	Animation* run = NULL;
-
 	Animation* left_puch = NULL;
 	Animation* kick = NULL;
 	Animation* dash = NULL;
 	Animation* jump = NULL;
 	Animation* protect = NULL;
+	Animation* hit = NULL;
+
 
 	Matrix44 getModel();
 	void initAnims();
