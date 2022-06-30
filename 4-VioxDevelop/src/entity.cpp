@@ -209,7 +209,7 @@ void sPlayer::initColliders() {
 	this->colliders.push_back(rightToe);
 	this->colliders.push_back(leftToe);
 }
-Vector3 sPlayer::playerCollision(std::vector<sPlayer*> enemies,  std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed) {
+Vector3 sPlayer::playerCollision(std::vector<sPlayer*> enemies,  std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed, EntityMesh* boss) {
 	//TEST COLLISIONS, HABRIA QUE TENER DINAMICAS - ESTATICAS, DINAMICAS - DINAMICAS, PLAYER - COSAS ETC...
 	//calculamos el centro de la esfera de colisión del player elevandola hasta la cintura
 	Vector3 character_center = nextPos + Vector3(0, 1, 0);
@@ -254,6 +254,8 @@ Vector3 sPlayer::playerCollision(std::vector<sPlayer*> enemies,  std::vector<Ent
 		Vector3 push_away = normalize(coll - character_center) * seconds_elapsed;
 		nextPos = this->pos - push_away;
 
+		
+
 		//cuidado con la Y, si nuestro juego es 2D la ponemos a 0
 		nextPos.y = 0;
 
@@ -262,13 +264,12 @@ Vector3 sPlayer::playerCollision(std::vector<sPlayer*> enemies,  std::vector<Ent
 		return nextPos;
 	}
 
-	/*boss
+
 	if (boss != NULL) {
 		Vector3 coll;
 		Vector3 collnorm;
-		EntityMesh* enemyEntity = boss->character_mesh;
-		if (enemyEntity->mesh->testSphereCollision(enemyEntity->model, character_center, this->radius, coll, collnorm)) {
-
+		if (boss->mesh->testSphereCollision(boss->model, character_center, this->radius * 80, coll, collnorm)) {
+			
 			//si la esfera está colisionando muevela a su posicion anterior alejandola del objeto
 			Vector3 push_away = normalize(coll - character_center) * seconds_elapsed;
 			nextPos = this->pos - push_away;
@@ -280,7 +281,7 @@ Vector3 sPlayer::playerCollision(std::vector<sPlayer*> enemies,  std::vector<Ent
 			//velocity = reflect(velocity, collnorm) * 0.95;
 			return nextPos;
 		}
-	}*/
+	}
 	
 
 
@@ -312,7 +313,7 @@ void sPlayer::attackCollision(std::vector<sPlayer*> enemies, Mesh& playerHP_quad
 		{
 			Collider* currentCollider = this->colliders[i];
 			Vector3 coll_center = currentCollider->colliderMesh->model.getTranslation();
-			int attack_dmg = 1;
+			int attack_dmg = this->attack_dmg;
 
 			if (currentEnemy->invulnerability_time > 0)
 				continue;
@@ -341,7 +342,7 @@ void sPlayer::attackCollision(std::vector<sPlayer*> enemies, Mesh& playerHP_quad
 }
 
 
-void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMesh*> entities,float seconds_elapsed, bool multi) {
+void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMesh*> entities,float seconds_elapsed, bool multi, EntityMesh* boss) {
 	Scene* scene = Game::instance->scene;
 
 	bool isRunning = false;
@@ -461,12 +462,12 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 
 	nextPos = this->pos + playerVel;
 
-	nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed);
+	nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed, boss);
 
 	this->pos = nextPos;
 }
 
-void sPlayer::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, sPlayer* player, float seconds_elapsed, Mesh& playerHP_quad, bool quad, int position) {
+void sPlayer::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, sPlayer* player, float seconds_elapsed, Mesh& playerHP_quad, bool quad, int position, EntityMesh* boss) {
 
 	this->animTimer = max(0.0f, this->animTimer - seconds_elapsed);
 
@@ -490,7 +491,7 @@ void sPlayer::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*
 	if (dist > 2.0f) {
 		this->ChangeAnim(2, NULL);
 		Vector3 nextPos = this->pos + (forward * this->playerVel * seconds_elapsed);
-		nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed);
+		nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed, boss);
 		this->pos = nextPos;
 
 	}
@@ -550,10 +551,13 @@ void sPlayer::updateInvulnerabilityTime(float seconds_elapsed) {
 
 
 //sBoss functions 
-sBoss::sBoss(const char* meshPath, const char* texPath) {
+sBoss::sBoss(const char* meshPath, const char* texPath, Vector3 spawn) {
 
 
 	initAnims();
+	this->spawnPos = spawn;
+	this->pos = spawn;
+
 	this->character_mesh = new EntityMesh(GL_TRIANGLES, meshPath, texPath, "data/shaders/skinning.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
 	this->character_mesh->anim = this->anims[0];
 
@@ -608,10 +612,10 @@ void sBoss::initAnims() {
 	this->anims.push_back(this->attackCircle);
 }
 
-void sBoss::npcMovement(sPlayer* player, float seconds_elapsed) {
+void sBoss::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities,sPlayer* player, float seconds_elapsed, EntityMesh* boss) {
 
 	this->animTimer = max(0.0f, this->animTimer - seconds_elapsed);
-	this->invencibility = max(0.0f, this->invencibility - seconds_elapsed);
+	this->invulnerability_time = max(0.0f, this->invulnerability_time - seconds_elapsed);
 
 	Matrix44 npcModel = this->getModel();
 	Vector3 side = npcModel.rotateVector(Vector3(1, 0, 0)).normalize();
@@ -632,7 +636,7 @@ void sBoss::npcMovement(sPlayer* player, float seconds_elapsed) {
 		if (dist > 2.0f) {
 
 			Vector3 nextPos = this->pos + (forward * this->playerVel * seconds_elapsed);
-			//nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed);
+			nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed, boss);
 			this->pos = nextPos;
 		}
 		else {
@@ -694,10 +698,10 @@ Animation* sBoss::renderAnim() {
 			this->shuriken_mesh->model.scale(10, 10, 10);
 			this->shuriken_mesh->render(cam);
 
-			if (distance(sin_pos, cos_pos, playerpos.x, playerpos.z) < 2 && this->invencibility <= 0.0f) {
+			if (distance(sin_pos, cos_pos, playerpos.x, playerpos.z) < 2 && this->invulnerability_time <= 0.0f) {
 				this->shurkikens[i] = true;
 				this->hit = true;
-				this->invencibility = 3.6f;
+				this->invulnerability_time = this->max_invulnerability_time;
 			}
 
 		}
@@ -800,9 +804,9 @@ Animation* sBoss::renderAnim() {
 				plane->model.scale(0.008, 0.008, 0.008);
 				plane->render(cam);
 
-				if (distance(x, z, playerpos.x, playerpos.z) <= 5.0f && this->invencibility <= 0.0f) {
+				if (distance(x, z, playerpos.x, playerpos.z) <= 5.0f && this->invulnerability_time <= 0.0f) {
 					this->hit = true;
-					this->invencibility = 3.6f;
+					this->invulnerability_time = this->max_invulnerability_time;
 				}
 
 			}

@@ -587,10 +587,8 @@ PlayLevel::PlayLevel(const char* map, const char* enemiesPath) {
 	//boss 
 	if (this->hasBoss) {
 
-		this->boss = new sBoss("data/boss/boss.mesh", "data/minichar_tex.png");
-		this->entities.push_back(this->boss->character_mesh);
+		this->boss = new sBoss("data/boss/boss.mesh", "data/minichar_tex.png", Vector3(10,0,10));
 		//this->entities.push_back(this->boss->shuriken_mesh);
-		this->boss->pos = Vector3(10, 0, 10);
 
 	}
 	
@@ -624,7 +622,7 @@ void PlayLevel::resetLevel() {
 	}
 	//if boss
 	if (this->hasBoss) {
-		//this->boss->reset(0);
+		this->boss = new sBoss("data/boss/boss.mesh", "data/minichar_tex.png", Vector3(10, 0, 10));
 	}
 }
 
@@ -669,7 +667,7 @@ void PlayLevel::Render() {
 			if (this->boss->hit) {
 				this->boss->hit = false;
 				if (this->player->invulnerability_time <= 0.0f) {
-					this->player->health--;
+					this->player->health -= this->boss->attack_dmg;
 					this->player->character_mesh->color = Vector4(1, 0, 0, 1);
 					updateHealthBar(-78, this->playerHP_quad, this->player);
 					s->audio->PlayGameSound(1, 1);
@@ -738,14 +736,15 @@ void PlayLevel::Update(float seconds_elapsed) {
 
 	if (this->player->health > 0) {
 		//player
-		this->player->playerMovement(this->enemies, this->entities, seconds_elapsed, false);
+		(this->hasBoss) ? this->player->playerMovement(this->enemies, this->entities, seconds_elapsed, false, this->boss->character_mesh) : this->player->playerMovement(this->enemies, this->entities, seconds_elapsed, false);
 		if (this->player->ctr == 3 || this->player->ctr == 4)
 			this->player->attackCollision(enemies, this->playerHP_quad, false, -78);
 			//boss
 			if (this->hasBoss) {
 				std::vector<sPlayer*> boss_enemy;
 				boss_enemy.push_back(this->boss);
-				this->player->attackCollision(boss_enemy, this->playerHP_quad, false, -78);
+				if (this->player->ctr == 3 || this->player->ctr == 4)
+					this->player->attackCollision(boss_enemy, this->playerHP_quad, false, -78);
 				boss_enemy.clear();
 			}
 
@@ -759,11 +758,11 @@ void PlayLevel::Update(float seconds_elapsed) {
 			//borrarse a el mismo de la lista de enemigos a colisionar
 			std::vector<sPlayer*> e = this->enemies;
 			e.erase(e.begin() + i);
-			enemy->npcMovement(e, this->entities, this->player, seconds_elapsed, this->playerHP_quad, true, -78);
+			(this->hasBoss) ? enemy->npcMovement(e, this->entities, this->player, seconds_elapsed, this->playerHP_quad, true, -78, this->boss->character_mesh) : enemy->npcMovement(e, this->entities, this->player, seconds_elapsed, this->playerHP_quad, true, -78);
 		}
 		//boss
 		if (this->hasBoss) {
-			this->boss->npcMovement(this->player, seconds_elapsed);
+			this->boss->npcMovement(this->enemies, this->entities, this->player, seconds_elapsed);
 			this->boss->updateInvulnerabilityTime(seconds_elapsed);
 		}
 
@@ -791,6 +790,7 @@ void PlayLevel::Update(float seconds_elapsed) {
 		if (Input::wasKeyPressed(SDL_SCANCODE_X)) {
 			this->resetLevel();
 			s->audio->ResetAudio();
+			//s->currentLevel = 0; reset level?
 			SetStage(STAGE_ID::INTRO, Game::instance->scene->currentStage);
 		}
 	}
