@@ -38,6 +38,10 @@ public:
 	EditorLevel* editor;
 	MultiLevel* multi;
 
+	//audio
+	bool music = false;
+	bool music_Playing = false;
+
 	void saveProgress();
 	void loadProgress();
 
@@ -46,7 +50,7 @@ public:
 Vector3 ReadVector3(std::stringstream& ss);
 void ImportMap(const char* path, std::vector<EntityMesh*>& entities, EntityMesh*& groundMesh, EntityMesh*& skyMesh);
 void ExportMap(std::vector<EntityMesh*>& entities, EntityMesh* groundMesh, EntityMesh* skyMesh);
-void ImportEnemies(const char* path, std::vector<sPlayer*>& enemies);
+void ImportEnemies(const char* path, std::vector<sPlayer*>& enemies, bool& isBoss);
 //utils
 Vector3 Lerp(Vector3 a, Vector3 b, float t);
 float sign(float value);

@@ -52,6 +52,9 @@ public:
 	Camera cam2D;
 	std::vector<textStruct> tags;
 
+	Texture* bgtex = Texture::Get("data/bg.png");
+	Texture* texIntro = Texture::Get("data/menu/Intro.png");
+
 	void initQuads();
 	IntroStage() {
 		initQuads();
@@ -63,6 +66,9 @@ public:
 
 class TutorialStage : public Stage {
 public:
+	Texture* tex = Texture::Get("data/tuto.png");
+	Texture* texBack = Texture::Get("data/menu/back.png");
+
 	STAGE_ID GetId() { return STAGE_ID::TUTORIAL; };
 	void Render();
 	void Update(float seconds_elapsed);

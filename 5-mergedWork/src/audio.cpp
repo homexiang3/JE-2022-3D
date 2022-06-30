@@ -26,6 +26,7 @@ HCHANNEL* Audio::Play(const char* filename) {
 */
 void Audio::PlayGameSound(int pos, int where)
 {
+	BASS_SetVolume(0.1);
 	//El handler para un sample
 	HSAMPLE hSample;
 	if (where == 1) hSample= this->samples[pos];
@@ -52,5 +53,10 @@ void Audio::LoadSample(const char* fileName, int where)
 	std::cout << " + AUDIO load" << fileName << std::endl;
 	if (where == 1)this->samples.push_back(hSample);
 	else if (where == 2)this->Menu_samples.push_back(hSample);
+}
+
+void Audio::ResetAudio() {
+	BASS_Stop();
+	BASS_Start();
 }
 

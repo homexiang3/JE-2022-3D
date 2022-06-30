@@ -72,7 +72,7 @@ void EntityMesh::render(Camera* camera) {
 	float tiling = this->tiling;
 
 	//comprueba que esten cargados
-	assert(a_mesh != NULL, "mesh in Entity Render was null"); //debug
+ 	assert(a_mesh != NULL, "mesh in Entity Render was null"); //debug
 	assert(a_shader != NULL, "shader in Entity Render was null");
 
 	if (!a_shader) return;
@@ -153,6 +153,7 @@ sPlayer::sPlayer(const char* meshPath, const char* texPath, Vector3 spawn) {
 	this->pos = spawn;
 	this->character_mesh = new EntityMesh(GL_TRIANGLES, meshPath, texPath, "data/shaders/skinning.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
 	this->character_mesh->anim = this->anims[0];
+	this->shield = new EntityMesh(GL_TRIANGLES, "data/shield.obj", "data/T_shield2.jpg", "data/shaders/basic.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
 
 }
 
@@ -165,23 +166,19 @@ Matrix44 sPlayer::getModel() {
 }
 void sPlayer::initAnims() {
 
-	this->idle = Animation::Get("data/anims/idle.skanim");
-	this->walk = Animation::Get("data/anims/walk.skanim");
-	this->run = Animation::Get("data/anims/run.skanim");
+	char* names[8] = { "data/anims/idle.skanim" ,"data/anims/walk.skanim","data/anims/run.skanim",
+					"data/anims/left_punch.skanim","data/anims/kick.skanim","data/anims/dash.skanim",
+					"data/anims/block.skanim","data/anims/hit.skanim" };
 
-	this->left_puch = Animation::Get("data/anims/left_punch.skanim");
-	this->kick = Animation::Get("data/anims/kick.skanim");
-	this->dash = Animation::Get("data/anims/dash.skanim");
-	this->jump = Animation::Get("data/anims/jump.skanim");
+	this->anims.reserve(8);
 
-	this->anims.reserve(7);
-	this->anims.push_back(this->idle);
-	this->anims.push_back(this->walk);
-	this->anims.push_back(this->run);
-	this->anims.push_back(this->left_puch);
-	this->anims.push_back(this->kick);
-	this->anims.push_back(this->dash);
-	this->anims.push_back(this->jump);
+	for (int i = 0; i < 8; i++)
+	{
+		std::cout << names[i] << std::endl;
+		Animation* now = Animation::Get(names[i]);
+		this->anims.push_back(now);
+	}
+
 }
 
 void sPlayer::initColliders() {
@@ -208,7 +205,7 @@ void sPlayer::initColliders() {
 	this->colliders.push_back(rightToe);
 	this->colliders.push_back(leftToe);
 }
-Vector3 sPlayer::playerCollision(std::vector<sPlayer*> enemies,  std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed) {
+Vector3 sPlayer::playerCollision(std::vector<sPlayer*> enemies,  std::vector<EntityMesh*> entities, Vector3 nextPos, float seconds_elapsed, EntityMesh* boss) {
 	//TEST COLLISIONS, HABRIA QUE TENER DINAMICAS - ESTATICAS, DINAMICAS - DINAMICAS, PLAYER - COSAS ETC...
 	//calculamos el centro de la esfera de colisión del player elevandola hasta la cintura
 	Vector3 character_center = nextPos + Vector3(0, 1, 0);
@@ -253,6 +250,8 @@ Vector3 sPlayer::playerCollision(std::vector<sPlayer*> enemies,  std::vector<Ent
 		Vector3 push_away = normalize(coll - character_center) * seconds_elapsed;
 		nextPos = this->pos - push_away;
 
+		
+
 		//cuidado con la Y, si nuestro juego es 2D la ponemos a 0
 		nextPos.y = 0;
 
@@ -261,13 +260,44 @@ Vector3 sPlayer::playerCollision(std::vector<sPlayer*> enemies,  std::vector<Ent
 		return nextPos;
 	}
 
+
+	if (boss != NULL) {
+		Vector3 coll;
+		Vector3 collnorm;
+		if (boss->mesh->testSphereCollision(boss->model, character_center, this->radius * 80, coll, collnorm)) {
+			
+			//si la esfera está colisionando muevela a su posicion anterior alejandola del objeto
+			Vector3 push_away = normalize(coll - character_center) * seconds_elapsed;
+			nextPos = this->pos - push_away;
+
+			//cuidado con la Y, si nuestro juego es 2D la ponemos a 0
+			nextPos.y = 0;
+
+			//reflejamos el vector velocidad para que de la sensacion de que rebota en la pared
+			//velocity = reflect(velocity, collnorm) * 0.95;
+			return nextPos;
+		}
+	}
+	
+
+
 	return nextPos;
 }
-void sPlayer::punchCollision(std::vector<sPlayer*> enemies) {
+void sPlayer::attackCollision(std::vector<sPlayer*> enemies) {
 
 	for (size_t i = 0; i < enemies.size(); i++)
 	{
 		sPlayer* currentEnemy = enemies[i];
+
+		//calcular si esta enfrente o detras
+		Matrix44 model = this->getModel();
+		Vector3 forward = model.rotateVector(Vector3(0, 0, -1)).normalize();
+
+		Matrix44 enemyModel = currentEnemy->getModel();
+		Vector3 enemyForward = enemyModel.rotateVector(Vector3(0, 0, -1)).normalize();
+
+		float frontOrBack = enemyForward.dot(forward);
+	   //if + back - front
 
 		//comprobamos si colisiona el objeto con la esfera (radio 3)
 		Vector3 coll;
@@ -275,18 +305,28 @@ void sPlayer::punchCollision(std::vector<sPlayer*> enemies) {
 		EntityMesh* enemyEntity = currentEnemy->character_mesh;
 
 		//testeo collision
-		for (size_t i = 0; i < this->colliders.size() / 2; i++)
+		for (size_t i = 0; i < this->colliders.size(); i++)
 		{
 			Collider* currentCollider = this->colliders[i];
 			Vector3 coll_center = currentCollider->colliderMesh->model.getTranslation();
+			int attack_dmg = this->attack_dmg;
+
 			if (currentEnemy->invulnerability_time > 0)
 				continue;
 
+			if (currentEnemy->Protected && frontOrBack <= 0.3) //block
+				continue;
+			
+			if (frontOrBack > 0.3) //si te ataca por la espalda te saca el doble
+				attack_dmg *= 2;
+
 			if (enemyEntity->mesh->testSphereCollision(enemyEntity->model, coll_center, 1, coll, collnorm)) {
-				std::cout << "collision on " << currentCollider->name << std::endl;
+				Scene* s = Game::instance->scene;
+				s->audio->PlayGameSound(1, 1);
 				currentEnemy->invulnerability_time = currentEnemy->max_invulnerability_time;
 				currentEnemy->character_mesh->color = Vector4(1, 0, 0, 1);
-				currentEnemy->health -= 1;
+				currentEnemy->health -= attack_dmg;
+				//currentEnemy->ChangeAnim(7, this->anims[7]->duration * 0.5);
 				std::cout << "Enemy Health " << currentEnemy->health << std::endl;
 				
 			}
@@ -294,38 +334,9 @@ void sPlayer::punchCollision(std::vector<sPlayer*> enemies) {
 
 	}
 }
-void sPlayer::kickCollision(std::vector<sPlayer*> enemies) {
 
-	for (size_t i = 0; i < enemies.size(); i++)
-	{
-		sPlayer* currentEnemy = enemies[i];
 
-		//comprobamos si colisiona el objeto con la esfera (radio 3)
-		Vector3 coll;
-		Vector3 collnorm;
-		EntityMesh* enemyEntity = currentEnemy->character_mesh;
-
-		//testeo collision
-		for (size_t i = 2; i < this->colliders.size(); i++)
-		{
-			Collider* currentCollider = this->colliders[i];
-			Vector3 coll_center = currentCollider->colliderMesh->model.getTranslation();
-			if (currentEnemy->invulnerability_time > 0)
-				continue;
-
-			if (enemyEntity->mesh->testSphereCollision(enemyEntity->model, coll_center, 1, coll, collnorm)) {
-				std::cout << "collision on " << currentCollider->name << std::endl;
-				currentEnemy->invulnerability_time = currentEnemy->max_invulnerability_time;
-				currentEnemy->character_mesh->color = Vector4(1, 0, 0, 1);
-				currentEnemy->health -= 1;
-				std::cout << "Enemy Health " << currentEnemy->health << std::endl;
-			}
-		}
-
-	}
-}
-
-void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMesh*> entities,float seconds_elapsed, bool multi) {
+void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMesh*> entities,float seconds_elapsed, bool multi, EntityMesh* boss) {
 	Scene* scene = Game::instance->scene;
 
 	bool isRunning = false;
@@ -344,6 +355,7 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	int kickKey = SDL_SCANCODE_V;
 	int runKey = SDL_SCANCODE_LSHIFT;
 	int dashKey = SDL_SCANCODE_X;
+	int shield = SDL_SCANCODE_E;
 
 	if (multi) {
 		upKey = SDL_SCANCODE_UP;
@@ -354,32 +366,39 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 		kickKey = SDL_SCANCODE_N;
 		runKey = SDL_SCANCODE_RSHIFT;
 		dashKey = SDL_SCANCODE_K;
+		shield = SDL_SCANCODE_J;
 	}
 
 	//punch 
-	if (Input::wasKeyPressed(punchKey) && this->animTimer <= 0.2f) {
+	if (Input::wasKeyPressed(punchKey) && this->animTimer <= 0.2f && this->ctr != 7) {
 		this->side = this->side * -1;
 		this->ChangeAnim(3, this->anims[3]->duration / 1.8 - 0.05);
-		scene->audio->PlayGameSound(0,1);
+		scene->audio->PlayGameSound(4, 1);
 	}
 
 	//kick
-	if (Input::wasKeyPressed(kickKey) && this->animTimer <= 0.2f) {
+	if (Input::wasKeyPressed(kickKey) && this->animTimer <= 0.2f && this->ctr != 7) {
 		this->side = this->side * -1;
-		this->ChangeAnim(4, this->anims[4]->duration);
+		this->ChangeAnim(4, this->anims[4]->duration / 1.8 - 0.2);
+		scene->audio->PlayGameSound(5, 1);
 	}
 
+
+	//return to idle on was key anims
 	if (this->animTimer <= 0.0f) ChangeAnim(0, NULL);
 
 	//sprint
 	if (Input::isKeyPressed(runKey)) isRunning = true;
 	this->playerVel = (isRunning == true) ? run_speed : walk_speed;
 
-
-	/*
-	if (Input::isKeyPressed(SDL_SCANCODE_SPACE)) {
-		seconds_elapsed *= 0.2f;
-	}*/
+	//shield
+	this->shield->model.setTranslation(this->pos.x, 0, this->pos.z);
+	this->shield->model.rotate(180.0f * DEG2RAD * Game::instance->time, Vector3(0, 1, 0));
+	if (Input::isKeyPressed(shield) && this->ctr != 7 ) {
+		this->Protected = true;
+		this->ChangeAnim(6, NULL);
+	}
+	if (this->ctr != 6) this->Protected = false;
 
 	//rotation
 	float rotSpeed = 120.0f * seconds_elapsed;
@@ -393,19 +412,19 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	Vector3 up = playerRotation.rotateVector(Vector3(0, 1, 0));
 
 	Vector3 playerVel;
-	
-	if (Input::isKeyPressed(upKey) && this->ctr != 5)
+
+	if (Input::isKeyPressed(upKey) && this->ctr != 5 && this->ctr != 6 && this->ctr != 7)
 	{
 		playerVel = playerVel + (forward * this->playerVel);
 		this->ChangeAnim(1, NULL);
 	}
-	if (Input::isKeyPressed(downKey) && this->ctr != 5)
+	if (Input::isKeyPressed(downKey) && this->ctr != 5 && this->ctr != 6 && this->ctr != 7)
 	{
 		playerVel = playerVel - (forward * this->playerVel);
 		this->ChangeAnim(1, NULL);
 	}
-	if (Input::isKeyPressed(rightRotKey)) this->yaw += rotSpeed;
-	if (Input::isKeyPressed(leftRotKey)) this->yaw -= rotSpeed;
+	if (Input::isKeyPressed(rightRotKey) && this->ctr != 7) this->yaw += rotSpeed;
+	if (Input::isKeyPressed(leftRotKey) && this->ctr != 7) this->yaw -= rotSpeed;
 
 	
 	if (Input::isKeyPressed(runKey)) ChangeAnim(2, NULL);// run anim
@@ -419,39 +438,37 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	//std::cout << scene->player.dash_direction.x << "  " << scene->player.dash_direction.y << std::endl;
 
 	Vector3 playerVec = this->character_mesh->model.frontVector().normalize();
-	float sumX = 20.0 * this->dash_direction.x;
-	float sumZ = 20.0 * this->dash_direction.y;
+	float modifier = (isRunning == true) ? 0.65 : 2; // to fix the dash disparity
+	float sumX = (15.0 * this->dash_direction.x) * modifier;
+	float sumZ = (15.0 * this->dash_direction.y) * modifier;
+
 	if (this->ctr == 5) {
 		playerVel[0] -= sumX;
 		playerVel[2] -= sumZ;
 	}
-	if (Input::wasKeyPressed(dashKey)) {
+	if (Input::wasKeyPressed(dashKey) && this->ctr != 6 && this->ctr != 7 ) {
+		std::cout << sumX << "  " << sumZ << std::endl;
 		playerVel[0] -= sumX;
 		playerVel[2] -= sumZ;
 		this->ChangeAnim(5, 0.25f);
+		scene->audio->PlayGameSound(3, 1);
 	}
 
 	nextPos = this->pos + playerVel;
 
-	nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed);
-
-	//test attack collisions
-	if (this->ctr == 3) { //punch
-		this->punchCollision(enemies);
-	}
-	if (this->ctr == 4) { //kick
-		this->kickCollision(enemies);
-	}
+	nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed, boss);
 
 	this->pos = nextPos;
 }
 
-void sPlayer::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, sPlayer* player, float seconds_elapsed) {
+void sPlayer::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities, sPlayer* player, float seconds_elapsed, EntityMesh* boss) {
 
+	this->animTimer = max(0.0f, this->animTimer - seconds_elapsed);
 
 	Matrix44 npcModel = this->getModel();
 	Vector3 side = npcModel.rotateVector(Vector3(1, 0, 0)).normalize();
 	Vector3 forward = npcModel.rotateVector(Vector3(0, 0, -1)).normalize();
+
 
 	Vector3 toTarget = player->pos - this->pos;
 	float dist = toTarget.length();
@@ -460,31 +477,27 @@ void sPlayer::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*
 	float sideDot = side.dot(toTarget);
 	float forwardDot = forward.dot(toTarget);
 
+
 	if (forwardDot < 0.98f) {
-		this->yaw += 200.0f * sign(sideDot) * seconds_elapsed;
+		this->yaw += 100.0f * sign(sideDot) * seconds_elapsed;
 	}
 
 	if (dist > 2.0f) {
-		this->ChangeAnim(1, NULL);
+		this->ChangeAnim(2, NULL);
 		Vector3 nextPos = this->pos + (forward * this->playerVel * seconds_elapsed);
-		nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed);
+		nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed, boss);
 		this->pos = nextPos;
 
 	}
 	else {
-		//como se puede cambiar el side aqui?
-		//como se puede parar una vez esta en dist > 2.0f?
+		
 		this->ChangeAnim(3, this->anims[3]->duration / 1.8 - 0.05);
 		std::vector<sPlayer*> playerEnemy;
 		playerEnemy.push_back(player);
 		if (this->ctr == 3) { //punch
-			this->punchCollision(playerEnemy);
+			this->attackCollision(playerEnemy);
 		}
-		/*
-		if (this->ctr == 4) { //kick
-			this->kickCollision(playerEnemy);
-		}
-		*/
+
 	}
 }
 void sPlayer::ChangeAnim( int i, float time)
@@ -503,7 +516,7 @@ Animation* sPlayer::renderAnim() {
 
 	//animations 
 	float time = getTime() * 0.001;
-	float t = fmod(time, this->idle->duration) / this->run->duration;
+	float t = fmod(time, this->anims[0]->duration) / this->anims[2]->duration;
 	/*
 	scene->player.walk->assignTime(t * scene->player.walk->duration);
 	scene->player.run->assignTime(t * scene->player.run->duration);
@@ -511,7 +524,7 @@ Animation* sPlayer::renderAnim() {
 	*/
 	for (int i = 0; i < this->anims.size(); i++) {
 		this->anims[i]->assignTime(time);
-		if (i == 3 || i == 6) this->anims[i]->assignTime(time * 1.8);
+		if (i == 3 || i == 6 || i == 4) this->anims[i]->assignTime(time * 1.8);
 		else this->anims[i]->assignTime(time);
 	}
 
@@ -532,10 +545,15 @@ void sPlayer::updateInvulnerabilityTime(float seconds_elapsed) {
 
 
 //sBoss functions 
-sBoss::sBoss(const char* meshPath, const char* texPath) {
+sBoss::sBoss(const char* meshPath, const char* texPath, Vector3 spawn) {
 
 
 	initAnims();
+	this->spawnPos = spawn;
+	this->pos = spawn;
+	this->max_health = 20;
+	this->health = 20;
+
 	this->character_mesh = new EntityMesh(GL_TRIANGLES, meshPath, texPath, "data/shaders/skinning.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
 	this->character_mesh->anim = this->anims[0];
 
@@ -566,34 +584,26 @@ Matrix44 sBoss::getModel() {
 }
 void sBoss::initAnims() {
 
-	this->idle = Animation::Get("data/boss/anim/idle.skanim");
-	this->run = Animation::Get("data/boss/anim/running.skanim");
-	this->rest = Animation::Get("data/boss/anim/rest.skanim");
-
-	this->die = Animation::Get("data/boss/anim/death.skanim");
-	this->charge = Animation::Get("data/boss/anim/charging.skanim");
-	this->shurikenSpawn = Animation::Get("data/boss/anim/shurikenSpawn.skanim");
-
-	this->attackRect = Animation::Get("data/boss/anim/attack1Rectangle.skanim");
-	this->attackCone = Animation::Get("data/boss/anim/attack2Circular.skanim");
-	this->attackCircle = Animation::Get("data/boss/anim/attack3Cone.skanim");
+	char* names[9] = { "data/boss/anim/idle.skanim" ,"data/boss/anim/running.skanim","data/boss/anim/rest.skanim",
+					"data/boss/anim/death.skanim" , "data/boss/anim/charging.skanim" ,"data/boss/anim/shurikenSpawn.skanim" ,
+					"data/boss/anim/attack1Rectangle.skanim" ,"data/boss/anim/attack2Circular.skanim","data/boss/anim/attack3Cone.skanim" };
 
 	this->anims.reserve(9);
-	this->anims.push_back(this->idle);
-	this->anims.push_back(this->run);
-	this->anims.push_back(this->rest);
-	this->anims.push_back(this->die);
-	this->anims.push_back(this->charge);
-	this->anims.push_back(this->shurikenSpawn);
-	this->anims.push_back(this->attackRect);
-	this->anims.push_back(this->attackCone);
-	this->anims.push_back(this->attackCircle);
+
+	for (int i = 0; i < 9; i++)
+	{
+		std::cout << names[i] << std::endl;
+		Animation* now = Animation::Get(names[i]);
+		this->anims.push_back(now);
+	}
+
+	
 }
 
-void sBoss::npcMovement(sPlayer* player, float seconds_elapsed) {
+void sBoss::npcMovement(std::vector<sPlayer*> enemies, std::vector<EntityMesh*> entities,sPlayer* player, float seconds_elapsed, EntityMesh* boss) {
 
 	this->animTimer = max(0.0f, this->animTimer - seconds_elapsed);
-	this->invencibility = max(0.0f, this->invencibility - seconds_elapsed);
+	this->invulnerability_time = max(0.0f, this->invulnerability_time - seconds_elapsed);
 
 	Matrix44 npcModel = this->getModel();
 	Vector3 side = npcModel.rotateVector(Vector3(1, 0, 0)).normalize();
@@ -614,7 +624,7 @@ void sBoss::npcMovement(sPlayer* player, float seconds_elapsed) {
 		if (dist > 2.0f) {
 
 			Vector3 nextPos = this->pos + (forward * this->playerVel * seconds_elapsed);
-			//nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed);
+			nextPos = this->playerCollision(enemies, entities, nextPos, seconds_elapsed, boss);
 			this->pos = nextPos;
 		}
 		else {
@@ -676,10 +686,10 @@ Animation* sBoss::renderAnim() {
 			this->shuriken_mesh->model.scale(10, 10, 10);
 			this->shuriken_mesh->render(cam);
 
-			if (distance(sin_pos, cos_pos, playerpos.x, playerpos.z) < 2 && this->invencibility <= 0.0f) {
+			if (distance(sin_pos, cos_pos, playerpos.x, playerpos.z) < 2 && this->invulnerability_time <= 0.0f) {
 				this->shurkikens[i] = true;
 				this->hit = true;
-				this->invencibility = 3.6f;
+				this->invulnerability_time = this->max_invulnerability_time;
 			}
 
 		}
@@ -690,12 +700,12 @@ Animation* sBoss::renderAnim() {
 	void sBoss::katanaRender(Camera * cam)
 	{
 		//Matrix44 neckLocalMatrix = this->anim->skeleton.getBoneMatrix(texts[i], false);
-		Matrix44 neckLocalMatrix = this->character_mesh->anim->skeleton.getBoneMatrix("mixamorig_RightHandThumb3", false);//mixamorig_LeftHandIndex2
+		Matrix44 neckLocalMatrix = this->character_mesh->anim->skeleton.getBoneMatrix("mixamorig_RightHandThumb1", false);//mixamorig_LeftHandIndex2
 
 		Matrix44 localToWorldMatrix = neckLocalMatrix * this->character_mesh->model;
 		//localToWorldMatrix.scale(0.03, 0.03, 0.03);
 		EntityMesh* rightHand = new EntityMesh(GL_TRIANGLES, "data/boss/naginata.obj", "data/boss/tex2.png", "data/shaders/skinning.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
-		////localToWorldMatrix.translate(0, -13, -1);
+		localToWorldMatrix.translate(10, 0, 10);
 		//localToWorldMatrix.rotate(180 * DEG2RAD, Vector3(1, 0, 0));//x
 		rightHand->model = localToWorldMatrix;
 		//rightHand->model.rotate((-47+90) * DEG2RAD, Vector3(1, 0, 0));//x
@@ -714,7 +724,7 @@ Animation* sBoss::renderAnim() {
 
 		this->katanaRender(cam);
 
-		if (this->health < 5) {
+		if (this->health < this->max_health/2) {
 			if (!this->animShurikens) {
 				this->ChangeAnim(5, this->anims[5]->duration);
 				this->animShurikens = true;
@@ -782,11 +792,19 @@ Animation* sBoss::renderAnim() {
 				plane->model.scale(0.008, 0.008, 0.008);
 				plane->render(cam);
 
-				if (distance(x, z, playerpos.x, playerpos.z) <= 5.0f && this->invencibility <= 0.0f) {
+				if (distance(x, z, playerpos.x, playerpos.z) <= 5.0f && this->invulnerability_time <= 0.0f) {
 					this->hit = true;
-					this->invencibility = 3.6f;
+					this->invulnerability_time = this->max_invulnerability_time;
 				}
 
 			}
 		}
+	}
+
+	void sPlayer::reset(float yaw) {
+		this->invulnerability_time = 0.0f;
+		this->pos = this->spawnPos;
+		this->yaw = yaw;
+		this->health = this->max_health;
+		this->animTimer = 0;
 	}

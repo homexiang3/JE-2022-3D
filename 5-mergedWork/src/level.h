@@ -49,7 +49,7 @@ public:
 	Camera* cam = NULL;
 	// boss
 	sBoss* boss = NULL;
-
+	bool hasBoss = false;
 	Texture* quadTex;
 	Mesh playerHP_quad;
 	Camera cam2D;
@@ -81,19 +81,6 @@ public:
 
 };
 
-/*
-class PlayLevel : public Level {
-public:
-	PlayLevel(const char* map, const char* enemiesPath);
-
-	sPlayer* player = NULL;
-	std::vector<sPlayer*> enemies;
-	Camera* cam = NULL;
-
-	void Render();
-	void Update(float seconds_elapsed);
-
-};*/
 
 void InitLevels(std::vector<PlayLevel*>& levels, EditorLevel*& editor, MultiLevel*& multi);
 void RenderMinimap(int widthStart, sPlayer*& player, std::vector<sPlayer*>& enemies, EntityMesh* groundMesh, std::vector<EntityMesh*>& entities);
