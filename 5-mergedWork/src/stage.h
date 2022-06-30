@@ -52,7 +52,7 @@ public:
 	Camera cam2D;
 	std::vector<textStruct> tags;
 
-	Texture* bgtex = Texture::Get("data/bg.png");
+	Texture* bgtex = Texture::Get("data/bg2.png");
 	Texture* texIntro = Texture::Get("data/menu/Intro.png");
 
 	void initQuads();

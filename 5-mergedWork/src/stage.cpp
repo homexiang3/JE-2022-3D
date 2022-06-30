@@ -94,7 +94,7 @@ void IntroStage::renderQuad(Mesh quad, Texture* tex, Matrix44 anim = Matrix44())
 	if (tex != NULL) {
 		a_shader->setUniform("u_texture", tex, 0);
 	}
-	a_shader->setUniform("u_time", time);
+	a_shader->setUniform("u_time", Game::instance->time);
 	a_shader->setUniform("u_tex_tiling", 1.0f);
 	a_shader->setUniform("u_model", anim);
 	quad.render(GL_TRIANGLES);
@@ -141,7 +141,7 @@ void IntroStage::Update(float seconds_elapsed) {
 
 	if (!scene->music_Playing) {
 		scene->audio->PlayGameSound(0, 2);
-		scene->music_Playing == true;
+		scene->music_Playing = true;
 	}
 
 	//std::cout << this->menuPointer << std::endl;
@@ -233,6 +233,12 @@ void EditorStage::Update(float seconds_elapsed) {
 	Scene* scene = Game::instance->scene;
 
 	scene->editor->Update(seconds_elapsed);
+
+	if (Input::wasKeyPressed(SDL_SCANCODE_C)) {
+		scene->audio->ResetAudio();
+		scene->music_Playing = false;
+		SetStage(STAGE_ID::INTRO, Game::instance->scene->currentStage);
+	}
 
 }
 

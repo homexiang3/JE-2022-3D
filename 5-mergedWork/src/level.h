@@ -50,6 +50,7 @@ public:
 	// boss
 	sBoss* boss = NULL;
 	bool hasBoss = false;
+	bool isOver = false;
 	Texture* quadTex;
 	Mesh playerHP_quad;
 	Camera cam2D;
@@ -78,6 +79,8 @@ public:
 	Mesh player1HP_quad;
 	Mesh player2HP_quad;
 	Camera cam2D;
+
+	bool isOver = false;
 
 };
 

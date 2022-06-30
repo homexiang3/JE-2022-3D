@@ -30,10 +30,12 @@ Scene::Scene()
 	audio->LoadSample("data/music/punch.wav", 1);//4
 	audio->LoadSample("data/music/kick.wav", 1);//5
 
-	audio->LoadSample("data/music/Level4Song.mp3", 1);//6
-	audio->LoadSample("data/music/Level3Song.mp3", 1);//7
-	audio->LoadSample("data/music/Level2Song.mp3", 1);//8
-	audio->LoadSample("data/music/Level1Song.mp3", 1);//9
+	audio->LoadSample("data/music/sfx_dead.wav",1);//6
+
+	audio->LoadSample("data/music/Level4Song.mp3", 1);//7
+	audio->LoadSample("data/music/Level3Song.mp3", 1);//8
+	audio->LoadSample("data/music/Level2Song.mp3", 1);//9
+	audio->LoadSample("data/music/Level1Song.mp3", 1);//10
 	
 	// menu samples 
 	audio->LoadSample("data/music/intro_music.mp3", 2);// 2 to be loaded into the menu sounds
@@ -222,7 +224,6 @@ void ImportEnemies(const char* path, std::vector<sPlayer*>& enemies, bool& isBos
 		isBoss = true;
 	}
 
-	std::cout << isBoss << std::endl;
 	//read entities
 	while (!ss.eof()) {
 		//read values

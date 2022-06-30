@@ -98,7 +98,7 @@ void drawHP(Mesh quad, Texture* tex, Matrix44 anim, Camera cam2D)
 	if (tex != NULL) {
 		a_shader->setUniform("u_texture", tex, 0);
 	}
-	a_shader->setUniform("u_time", time);
+	a_shader->setUniform("u_time", Game::instance->time);
 	a_shader->setUniform("u_tex_tiling", 1.0f);
 	a_shader->setUniform("u_model", anim);
 	quad.render(GL_TRIANGLES);
@@ -408,6 +408,7 @@ void MultiLevel::resetLevel() {
 	
 	this->player2->reset(0);
 	updateHealthBar(22, player2HP_quad, this->player2);
+	this->isOver = false;
 }
 
 void MultiLevel::Render() {
@@ -493,14 +494,15 @@ void MultiLevel::Update(float seconds_elapsed) {
 			this->player2->attackCollision(enemies);
 	}
 	else {	
-		/* //solo funciona al pasar de pantalla
-		s->music_Playing = false;
-		s->audio->ResetAudio();
-		s->music_Playing = true;
-		s->audio->PlayGameSound(2, 1);*/
-		
+	
+		if (!this->isOver) {
+			this->isOver = true;
+			s->audio->ResetAudio();
+			s->audio->PlayGameSound(2, 1);//game over sfx
+		}
 
 		if (Input::wasKeyPressed(SDL_SCANCODE_C)) {
+			s->audio->ResetAudio();
 			this->resetLevel();
 		}
 		if (Input::wasKeyPressed(SDL_SCANCODE_X)) {
@@ -625,6 +627,8 @@ void PlayLevel::resetLevel() {
 	if (this->hasBoss) {
 		this->boss = new sBoss("data/boss/boss.mesh", "data/minichar_tex.png", Vector3(10, 0, 10));
 	}
+
+	this->isOver = false;
 }
 
 
@@ -673,7 +677,6 @@ void PlayLevel::Render() {
 					//this->player->ChangeAnim(7, this->player->anims[7]->duration);
 					s->audio->PlayGameSound(1, 1);
 					this->player->invulnerability_time = this->player->max_invulnerability_time;
-					std::cout << "collison with boss" << std::endl;
 				}
 			}
 		}
@@ -786,6 +789,12 @@ void PlayLevel::Update(float seconds_elapsed) {
 		}
 	}
 	else {
+		if (!this->isOver) {
+			this->isOver = true;
+			s->audio->ResetAudio();
+			s->audio->PlayGameSound(6, 1);//game over sfx
+		}
+
 		if (Input::wasKeyPressed(SDL_SCANCODE_C)) {
 			this->resetLevel();
 		}

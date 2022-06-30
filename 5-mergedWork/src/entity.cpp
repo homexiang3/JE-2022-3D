@@ -32,7 +32,7 @@ EntityMesh::EntityMesh(int primitive, std::string meshPath, std::string textureP
 
 void Entity::render(Camera* cam) {
 	//if it was entity mesh, Matrix44 model = getGlobalMatrix(), render code...
-	//Camera* camera = Camera::current;
+
 	Matrix44 model = this->model;
 
 
@@ -82,15 +82,6 @@ void EntityMesh::render(Camera* camera) {
 	BoundingBox aabb = this->aabb;
 	int primitive = this->primitive;
 	aabb = transformBoundingBox(model, a_mesh->box);
-
-	/*distance check for flod
-
-	Vector3 planePos = model.getTranslation();
-	Vector3 camPos = camera->eye;
-	float dist = planePos.distance(camPos);
-
-	if (dist > flod_dist) render low quality mesh
-	*/
 
 	//frustrum
 	if (camera->testBoxInFrustum(aabb.center, aabb.halfsize)) {
@@ -174,7 +165,6 @@ void sPlayer::initAnims() {
 
 	for (int i = 0; i < 8; i++)
 	{
-		std::cout << names[i] << std::endl;
 		Animation* now = Animation::Get(names[i]);
 		this->anims.push_back(now);
 	}
@@ -340,8 +330,8 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	Scene* scene = Game::instance->scene;
 
 	bool isRunning = false;
-	float walk_speed = 10.0f * seconds_elapsed;
-	float run_speed = 20.0f * seconds_elapsed;
+	float walk_speed = 7.0f * seconds_elapsed;
+	float run_speed = 14.0f * seconds_elapsed;
 
 	this->animTimer = max(0.0f, this->animTimer - seconds_elapsed);
 
@@ -352,7 +342,7 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	int rightRotKey = SDL_SCANCODE_D;
 	int leftRotKey = SDL_SCANCODE_A;
 	int punchKey = SDL_SCANCODE_Z;
-	int kickKey = SDL_SCANCODE_V;
+	int kickKey = SDL_SCANCODE_C;
 	int runKey = SDL_SCANCODE_LSHIFT;
 	int dashKey = SDL_SCANCODE_X;
 	int shield = SDL_SCANCODE_E;
@@ -388,7 +378,7 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	if (this->animTimer <= 0.0f) ChangeAnim(0, NULL);
 
 	//sprint
-	if (Input::isKeyPressed(runKey)) isRunning = true;
+	if (Input::isKeyPressed(runKey)&& this->ctr != 3 && this->ctr !=4) isRunning = true;
 	this->playerVel = (isRunning == true) ? run_speed : walk_speed;
 
 	//shield
@@ -413,7 +403,7 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 
 	Vector3 playerVel;
 
-	if (Input::isKeyPressed(upKey) && this->ctr != 5 && this->ctr != 6 && this->ctr != 7)
+	if (Input::isKeyPressed(upKey) && this->ctr != 5 && this->ctr != 6 && this->ctr != 7 )
 	{
 		playerVel = playerVel + (forward * this->playerVel);
 		this->ChangeAnim(1, NULL);
@@ -427,7 +417,7 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	if (Input::isKeyPressed(leftRotKey) && this->ctr != 7) this->yaw -= rotSpeed;
 
 	
-	if (Input::isKeyPressed(runKey)) ChangeAnim(2, NULL);// run anim
+	if (Input::isKeyPressed(runKey) && (Input::isKeyPressed(upKey) || Input::isKeyPressed(downKey))) ChangeAnim(2, NULL);// run anim
 
 	Vector3 nextPos = this->pos + playerVel;
 
@@ -435,10 +425,8 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 	Vector2 dash_dir = Vector2(this->pos.x - nextPos[0], this->pos.z - nextPos[2]).normalize();
 	if (dash_dir.x != 0 || dash_dir.y != 0)this->dash_direction = dash_dir;
 
-	//std::cout << scene->player.dash_direction.x << "  " << scene->player.dash_direction.y << std::endl;
-
 	Vector3 playerVec = this->character_mesh->model.frontVector().normalize();
-	float modifier = (isRunning == true) ? 0.65 : 2; // to fix the dash disparity
+	float modifier = (isRunning == true) ? 0.8 : 2.45; // to fix the dash disparity
 	float sumX = (15.0 * this->dash_direction.x) * modifier;
 	float sumZ = (15.0 * this->dash_direction.y) * modifier;
 
@@ -447,7 +435,6 @@ void sPlayer::playerMovement(std::vector<sPlayer*> enemies,std::vector<EntityMes
 		playerVel[2] -= sumZ;
 	}
 	if (Input::wasKeyPressed(dashKey) && this->ctr != 6 && this->ctr != 7 ) {
-		std::cout << sumX << "  " << sumZ << std::endl;
 		playerVel[0] -= sumX;
 		playerVel[2] -= sumZ;
 		this->ChangeAnim(5, 0.25f);
@@ -517,11 +504,7 @@ Animation* sPlayer::renderAnim() {
 	//animations 
 	float time = getTime() * 0.001;
 	float t = fmod(time, this->anims[0]->duration) / this->anims[2]->duration;
-	/*
-	scene->player.walk->assignTime(t * scene->player.walk->duration);
-	scene->player.run->assignTime(t * scene->player.run->duration);
-	scene->player.idle->assignTime(time * scene->player.idle->duration);
-	*/
+	
 	for (int i = 0; i < this->anims.size(); i++) {
 		this->anims[i]->assignTime(time);
 		if (i == 3 || i == 6 || i == 4) this->anims[i]->assignTime(time * 1.8);
@@ -592,7 +575,6 @@ void sBoss::initAnims() {
 
 	for (int i = 0; i < 9; i++)
 	{
-		std::cout << names[i] << std::endl;
 		Animation* now = Animation::Get(names[i]);
 		this->anims.push_back(now);
 	}
@@ -665,7 +647,6 @@ Animation* sBoss::renderAnim() {
 	float distance(int x1, int y1, int x2, int y2)
 	{
 		// Calculating distance
-		//std::cout << sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2) * 1.0) << std::endl;
 		return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2) * 1.0);
 	}
 
@@ -693,35 +674,23 @@ Animation* sBoss::renderAnim() {
 			}
 
 		}
-		//std::cout << "osi" <<this->pos.x << "   " << this->pos.y << "  " << this->pos.z << std::endl;
-		//std::cout << this->character_mesh->model.getTranslation().x << "   " << character_mesh->model.getTranslation().y << "  " <<character_mesh->model.getTranslation().z << std::endl;
 
 	}
 	void sBoss::katanaRender(Camera * cam)
 	{
-		//Matrix44 neckLocalMatrix = this->anim->skeleton.getBoneMatrix(texts[i], false);
+		// el arma no ha habido manera de que se vea perfecta sry :(
 		Matrix44 neckLocalMatrix = this->character_mesh->anim->skeleton.getBoneMatrix("mixamorig_RightHandThumb1", false);//mixamorig_LeftHandIndex2
 
 		Matrix44 localToWorldMatrix = neckLocalMatrix * this->character_mesh->model;
-		//localToWorldMatrix.scale(0.03, 0.03, 0.03);
 		EntityMesh* rightHand = new EntityMesh(GL_TRIANGLES, "data/boss/naginata.obj", "data/boss/tex2.png", "data/shaders/skinning.vs", "data/shaders/texture.fs", Vector4(1, 1, 1, 1));
 		localToWorldMatrix.translate(10, 0, 10);
-		//localToWorldMatrix.rotate(180 * DEG2RAD, Vector3(1, 0, 0));//x
 		rightHand->model = localToWorldMatrix;
-		//rightHand->model.rotate((-47+90) * DEG2RAD, Vector3(1, 0, 0));//x
-		//rightHand->model.rotate((22) * DEG2RAD, Vector3(0, 1, 0));//y
-		//rightHand->model.rotate((+16+90) * DEG2RAD, Vector3(0, 0, -1)); //z
-		//rightHand->model.rotate(90 * DEG2RAD, Vector3(1, 0, 0));//x
-		//rightHand->model.rotate((22) * DEG2RAD, Vector3(0, 1, 0));//y
-		//rightHand->model.rotate((+16+90) * DEG2RAD, Vector3(0, 0, -1)); //z
-
+		
 		rightHand->render(cam);
-		//RenderMesh(GL_TRIANGLES, localToWorldMatrix, mesh, tex, shader, camera);
+		
 	}
 
 	void sBoss::Attack(Camera * cam, Vector3 playerpos) {
-		//std::cout << this->character_mesh->model.frontVector().x << "   " << this->character_mesh->model.frontVector().y << "  " << this->character_mesh->model.frontVector().z << std::endl;
-
 		this->katanaRender(cam);
 
 		if (this->health < this->max_health/2) {
